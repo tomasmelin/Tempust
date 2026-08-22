@@ -1,0 +1,37 @@
+
+            <!-- fenix -->
+            <iq:product id="fenix6"/>
+            <iq:product id="fenix6s"/>
+            <iq:product id="fenix6x"/>
+            <iq:product id="fenix6pro"/>
+            <iq:product id="fenix6spro"/>
+            <iq:product id="fenix6xpro"/>
+            <iq:product id="fenix7"/>
+            <iq:product id="fenix7s"/>
+            <iq:product id="fenix7x"/>
+            <iq:product id="fenix7pro"/>
+            <iq:product id="fenix7spro"/>
+            <iq:product id="fenix7xpro"/>
+            <iq:product id="fenix8"/>
+
+            <!-- epix / MARQ / tactix / enduro -->
+            <iq:product id="epix2"/>
+            <iq:product id="marq2"/>
+            <iq:product id="tactix7"/>
+            <iq:product id="enduro2"/>
+
+            <!-- vivoactive / Venu -->
+            <iq:product id="vivoactive4"/>
+            <iq:product id="vivoactive4s"/>
+            <iq:product id="vivoactive5"/>
+            <iq:product id="venu2"/>
+            <iq:product id="venu2s"/>
+            <iq:product id="venu2plus"/>
+            <iq:product id="venu3"/>
+            <iq:product id="venu3s"/>
+
+            <!-- Descent (dive computers, also used for general GPS wear) -->
+            <iq:product id="descentmk2"/>
+            <iq:product id="descentmk2s"/>
+            <iq:product id="descentmk3_43mm"/>
+            <iq:product id="descentmk3_51mm"/>

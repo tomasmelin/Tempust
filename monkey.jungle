@@ -1,0 +1,5 @@
+project.manifest = manifest.xml
+
+# Default source/resource paths (source/**, resources/**) already match
+# this project's layout, so nothing else is needed here. See
+# LOCAL_SETUP.md if you want to understand what this file is for.

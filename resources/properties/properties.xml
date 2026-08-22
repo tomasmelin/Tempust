@@ -1,0 +1,10 @@
+<properties>
+    <!--
+        Persisted app setting, editable by the user via Garmin Connect
+        Mobile (Device > Apps > Tempust > Settings) or Garmin Express.
+        0 = Celsius, 1 = Fahrenheit. Celsius is the default because
+        temperatur.nu itself reports readings in Celsius, so it's the
+        "no conversion needed" baseline.
+    -->
+    <property id="TempUnit" type="number">0</property>
+</properties>

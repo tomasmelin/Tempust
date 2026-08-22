@@ -1,0 +1,10 @@
+# Build output
+bin/
+
+# Never commit your signing key
+*.der
+*.pem
+
+# Editor/OS cruft
+.vscode/
+.DS_Store

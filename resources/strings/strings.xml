@@ -1,0 +1,29 @@
+<strings>
+    <string id="AppName">Tempust</string>
+
+    <!-- UI labels -->
+    <string id="LabelNearestTemp">Nearest temp</string>
+    <string id="HintRefresh">SELECT = refresh</string>
+    <string id="UnknownStation">Unknown station</string>
+
+    <!-- Status messages shown while fetching / on error -->
+    <string id="StatusPromptRefresh">Press SELECT to fetch</string>
+    <string id="StatusLocating">Locating...</string>
+    <string id="StatusFetching">Fetching temperature...</string>
+    <string id="StatusNoPosition">No GPS position yet</string>
+    <string id="StatusNoStation">No nearby station found</string>
+    <string id="StatusErrorPrefix">Error (code </string>
+    <string id="StatusErrorSuffix">)</string>
+
+    <!-- Settings (Garmin Connect Mobile > device > App Settings > Tempust) -->
+    <string id="TempUnitTitle">Temperature unit</string>
+    <string id="TempUnitCelsius">Celsius (°C)</string>
+    <string id="TempUnitFahrenheit">Fahrenheit (°F)</string>
+
+    <!-- Easter egg: tap SELECT 5 times quickly. See README. -->
+    <string id="EasterEggTitle">SAUNA MODE UNLOCKED</string>
+    <string id="EasterEggNoData">Get a real reading first, hero.</string>
+    <string id="EasterEggPrefix">You're </string>
+    <string id="EasterEggSuffix"> from an 80°C sauna.</string>
+    <string id="EasterEggFooter">Bring a towel.</string>
+</strings>

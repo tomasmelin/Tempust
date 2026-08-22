@@ -1,0 +1,98 @@
+<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
+    <iq:application
+        entry="TempustApp"
+        id="1de83b78-c0ce-40c0-b717-0f98fdb37f48"
+        launcherIcon="@Drawables.LauncherIcon"
+        minSdkVersion="4.2.0"
+        name="@Strings.AppName"
+        type="widget"
+        version="1.0.0">
+
+        <!--
+            NOTE: replace the placeholder "id" above with the real UUID
+            that the Connect IQ SDK generates automatically when you
+            create the project via "Connect IQ: New Project" in VS Code
+            (see README).
+        -->
+
+        <!--
+            Broad list of current GPS-capable, Connect IQ 4+ devices
+            that support the Positioning + Communications permissions
+            this app needs (running/multisport watches only - plain
+            activity trackers without GPS are intentionally excluded,
+            since the app can't function on them).
+
+            IMPORTANT: Garmin adds new watches and occasionally tweaks
+            product-id strings over time, and the SDK validates every
+            id against its own device database at build time (an
+            unknown id fails the build, so nothing here can "silently"
+            break). Before publishing, open this project in the VS
+            Code Monkey C extension and use "Edit Compatible Devices" /
+            the device picker in the export wizard to confirm this
+            list against the current full catalog and add anything
+            new - that UI is the authoritative source, this list is a
+            solid starting point, not the final word.
+        -->
+        <iq:products>
+            <!-- Forerunner -->
+            <iq:product id="fr55"/>
+            <iq:product id="fr255"/>
+            <iq:product id="fr255s"/>
+            <iq:product id="fr265"/>
+            <iq:product id="fr265s"/>
+            <iq:product id="fr745"/>
+            <iq:product id="fr945"/>
+            <iq:product id="fr945lte"/>
+            <iq:product id="fr955"/>
+            <iq:product id="fr965"/>
+
+            <!-- fenix -->
+            <iq:product id="fenix6"/>
+            <iq:product id="fenix6s"/>
+            <iq:product id="fenix6x"/>
+            <iq:product id="fenix6pro"/>
+            <iq:product id="fenix6spro"/>
+            <iq:product id="fenix6xpro"/>
+            <iq:product id="fenix7"/>
+            <iq:product id="fenix7s"/>
+            <iq:product id="fenix7x"/>
+            <iq:product id="fenix7pro"/>
+            <iq:product id="fenix7spro"/>
+            <iq:product id="fenix7xpro"/>
+            <iq:product id="fenix8"/>
+
+            <!-- epix / MARQ / tactix / enduro -->
+            <iq:product id="epix2"/>
+            <iq:product id="marq2"/>
+            <iq:product id="tactix7"/>
+            <iq:product id="enduro2"/>
+
+            <!-- vivoactive / Venu -->
+            <iq:product id="vivoactive4"/>
+            <iq:product id="vivoactive4s"/>
+            <iq:product id="vivoactive5"/>
+            <iq:product id="venu2"/>
+            <iq:product id="venu2s"/>
+            <iq:product id="venu2plus"/>
+            <iq:product id="venu3"/>
+            <iq:product id="venu3s"/>
+
+            <!-- Descent (dive computers, also used for general GPS wear) -->
+            <iq:product id="descentmk2"/>
+            <iq:product id="descentmk2s"/>
+            <iq:product id="descentmk3_43mm"/>
+            <iq:product id="descentmk3_51mm"/>
+        </iq:products>
+
+        <iq:permissions>
+            <iq:uses-permission id="Communications"/>
+            <iq:uses-permission id="Positioning"/>
+        </iq:permissions>
+
+        <iq:languages>
+            <iq:language>eng</iq:language>
+        </iq:languages>
+
+        <iq:barrels/>
+    </iq:application>
+</iq:manifest>

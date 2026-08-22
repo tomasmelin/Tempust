@@ -1,0 +1,8 @@
+<settings>
+    <setting propertyKey="@Properties.TempUnit" title="@Strings.TempUnitTitle">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.TempUnitCelsius</listEntry>
+            <listEntry value="1">@Strings.TempUnitFahrenheit</listEntry>
+        </settingConfig>
+    </setting>
+</settings>
