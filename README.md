@@ -34,14 +34,21 @@ API, based on the watch's GPS position.
 
 ## How it works
 
-1. The widget requests a one-shot GPS fix from the watch.
+1. The widget requests a GPS fix from the watch (a cached fix is used
+   immediately if the watch already has one).
 2. The position is sent to `https://api.temperatur.nu/tnu_1.20.php`
-   with `num=1` (nearest station) and `sensor_type=air`.
-3. The JSON response is parsed and the temperature + station name are
-   displayed.
-4. The widget refreshes automatically every 5 minutes while open (and
+   with `num=1` (nearest station) and `sensor_type=air`. The response
+   includes the station's `id`.
+3. That `id` is used for a follow-up request (`p=<id>&data=1&span=1day`)
+   to fetch the station's last ~24h of readings for the trend graph. A
+   failure here doesn't affect the current reading - it's shown either
+   way, just without a graph underneath.
+4. The temperature is shown at the top with the 24h graph below it -
+   same layout (temp + graph) in both the full widget and its glance.
+5. The widget refreshes automatically every 5 minutes while open (and
    stops polling as soon as you leave it – no background activity), or
-   on demand via SELECT.
+   on demand via SELECT. The glance does a single fetch each time it's
+   shown, per Connect IQ's Glance guidance.
 
 The watch needs to be paired with the Garmin Connect app (with an
 internet connection) for `Communications.makeWebRequest` to work –

@@ -20,7 +20,14 @@ class TempustDelegate extends WatchUi.BehaviorDelegate {
 
     private const RAPID_TAP_WINDOW_MS = 600;
     private const EASTER_EGG_TAP_COUNT = 5;
-    private const TAP_DEBOUNCE_MS = 450;
+
+    // Must be >= RAPID_TAP_WINDOW_MS. The debounce timer is what
+    // decides "the burst is over"; if it were shorter than the window,
+    // it would resolve (and reset _tapCount) before a same-burst tap
+    // arriving up to RAPID_TAP_WINDOW_MS after the previous one had a
+    // chance to land - silently capping every burst below
+    // EASTER_EGG_TAP_COUNT no matter how quickly the user tapped.
+    private const TAP_DEBOUNCE_MS = RAPID_TAP_WINDOW_MS + 100;
 
     private var _view as TempustView;
     private var _tapCount as Lang.Number = 0;

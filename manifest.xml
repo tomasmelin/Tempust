@@ -1,20 +1,12 @@
+<?xml version="1.0"?>
 <iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
-    <iq:application
-        entry="TempustApp"
-        id="1de83b78-c0ce-40c0-b717-0f98fdb37f48"
-        launcherIcon="@Drawables.LauncherIcon"
-        minSdkVersion="4.2.0"
-        name="@Strings.AppName"
-        type="widget"
-        version="1.0.0">
-
+    <iq:application entry="TempustApp" id="1de83b78-c0ce-40c0-b717-0f98fdb37f48" launcherIcon="@Drawables.LauncherIcon" minSdkVersion="4.2.0" name="@Strings.AppName" type="widget" version="1.0.0">
         <!--
             NOTE: replace the placeholder "id" above with the real UUID
             that the Connect IQ SDK generates automatically when you
             create the project via "Connect IQ: New Project" in VS Code
             (see README).
         -->
-
         <!--
             Broad list of current GPS-capable, Connect IQ 4+ devices
             that support the Positioning + Communications permissions
@@ -35,64 +27,64 @@
         -->
         <iq:products>
             <!-- Forerunner -->
-            <iq:product id="fr55"/>
+            <!--
+        fenix - every fenix7/8-generation id in the installed SDK's
+        device database as of this writing, including fenix E, plus
+        the no-WiFi 7 Pro variants. Bare ids like "fenix6x" or "fenix8"
+        don't exist in this SDK - Garmin splits by size/material
+        instead (fenix6xpro, fenix843mm/847mm, etc.).
+
+        fenix3, fenix3_hr, fenix5-family, fenix6-family and fenix
+        Chronos are NOT included: the compiler hard-errors on them -
+        "Device 'fenixN' does not support API Level '4.2.0'" - because
+        those devices predate this app's minSdkVersion (set above).
+        To add them back you'd need to lower minSdkVersion project-wide
+        (affecting every device here, not just these) and re-verify
+        every API this app uses is actually available that far back -
+        deliberately not done here without that check. tactix/quatix/
+        enduro share hardware with several fenix generations but are
+        intentionally left out here too - they're their own product
+        line, add them separately if you want to support them.
+    -->
+            <!-- epix / MARQ -->
+            <!-- vivoactive / Venu -->
+            <!-- Descent (dive computers, also used for general GPS wear) -->
+            <iq:product id="epix2"/>
+            <iq:product id="fenix7"/>
+            <iq:product id="fenix7pro"/>
+            <iq:product id="fenix7pronowifi"/>
+            <iq:product id="fenix7s"/>
+            <iq:product id="fenix7spro"/>
+            <iq:product id="fenix7x"/>
+            <iq:product id="fenix7xpro"/>
+            <iq:product id="fenix7xpronowifi"/>
+            <iq:product id="fenix843mm"/>
+            <iq:product id="fenix847mm"/>
+            <iq:product id="fenix8pro47mm"/>
+            <iq:product id="fenix8solar47mm"/>
+            <iq:product id="fenix8solar51mm"/>
+            <iq:product id="fenixe"/>
             <iq:product id="fr255"/>
             <iq:product id="fr255s"/>
             <iq:product id="fr265"/>
             <iq:product id="fr265s"/>
-            <iq:product id="fr745"/>
-            <iq:product id="fr945"/>
-            <iq:product id="fr945lte"/>
             <iq:product id="fr955"/>
             <iq:product id="fr965"/>
-
-            <!-- fenix -->
-            <iq:product id="fenix6"/>
-            <iq:product id="fenix6s"/>
-            <iq:product id="fenix6x"/>
-            <iq:product id="fenix6pro"/>
-            <iq:product id="fenix6spro"/>
-            <iq:product id="fenix6xpro"/>
-            <iq:product id="fenix7"/>
-            <iq:product id="fenix7s"/>
-            <iq:product id="fenix7x"/>
-            <iq:product id="fenix7pro"/>
-            <iq:product id="fenix7spro"/>
-            <iq:product id="fenix7xpro"/>
-            <iq:product id="fenix8"/>
-
-            <!-- epix / MARQ / tactix / enduro -->
-            <iq:product id="epix2"/>
             <iq:product id="marq2"/>
-            <iq:product id="tactix7"/>
-            <iq:product id="enduro2"/>
-
-            <!-- vivoactive / Venu -->
-            <iq:product id="vivoactive4"/>
-            <iq:product id="vivoactive4s"/>
-            <iq:product id="vivoactive5"/>
             <iq:product id="venu2"/>
-            <iq:product id="venu2s"/>
             <iq:product id="venu2plus"/>
+            <iq:product id="venu2s"/>
             <iq:product id="venu3"/>
             <iq:product id="venu3s"/>
-
-            <!-- Descent (dive computers, also used for general GPS wear) -->
-            <iq:product id="descentmk2"/>
-            <iq:product id="descentmk2s"/>
-            <iq:product id="descentmk3_43mm"/>
-            <iq:product id="descentmk3_51mm"/>
+            <iq:product id="vivoactive5"/>
         </iq:products>
-
         <iq:permissions>
             <iq:uses-permission id="Communications"/>
             <iq:uses-permission id="Positioning"/>
         </iq:permissions>
-
         <iq:languages>
             <iq:language>eng</iq:language>
         </iq:languages>
-
         <iq:barrels/>
     </iq:application>
 </iq:manifest>

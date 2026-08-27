@@ -2,7 +2,8 @@ import Toybox.WatchUi;
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Timer;
-import Toybox.Application.Properties;
+import Toybox.System;
+import Toybox.Math;
 
 // How often (in seconds) the widget automatically refreshes while it's
 // on screen. temperatur.nu rate-limits identical requests from the
@@ -20,6 +21,31 @@ const EASTER_EGG_DISPLAY_MS = 4000;
 // used only for the easter egg's "degrees from a sauna" readout.
 const SAUNA_REFERENCE_CELSIUS = 80.0;
 
+// Extra clearance (in pixels) kept between text and a round bezel,
+// beyond the minimum the chord math says is needed - a small buffer
+// against rounding/font-metric slop.
+const BEZEL_MARGIN_PX = 4;
+
+// Where the 24h graph starts vertically, as a fraction of screen
+// height. Its bottom edge is NOT a fixed fraction (see onUpdate()) -
+// it's computed to stop above wherever the hint/attribution rows
+// actually land, since those are anchored from their own measured
+// width outward and can vary in position by device and language.
+// The graph's horizontal extent is likewise computed at draw time
+// from the actual bezel shape (see safeHalfWidthAt()), not a fixed
+// margin.
+const GRAPH_TOP_FRACTION = 0.38;
+
+// Vertical gap (in pixels) kept between stacked bottom rows (the 24h
+// graph, the refresh hint, and the attribution line) so a bezel-safety
+// nudge on one can never make it touch the next.
+const ROW_GAP_PX = 4;
+
+// Fixed size (see drawFlame()) of the easter egg's flame icons - used
+// to keep the flame row's own width inside the bezel-safe span too,
+// not just the row of flame centers.
+const FLAME_SIZE = 10;
+
 class TempustView extends WatchUi.View {
 
     private var _client as TempustWeatherClient;
@@ -28,6 +54,7 @@ class TempustView extends WatchUi.View {
 
     private var _temperatureCelsius as Lang.Float?;
     private var _stationName as Lang.String = "";
+    private var _historyCelsius as Lang.Array<Lang.Float>?;
     private var _statusText as Lang.String = "";
 
     private var _easterEggActive as Lang.Boolean = false;
@@ -92,6 +119,7 @@ class TempustView extends WatchUi.View {
             _stationName = (result.stationName != null)
                 ? result.stationName
                 : WatchUi.loadResource(Rez.Strings.UnknownStation) as Lang.String;
+            _historyCelsius = result.historyCelsius;
             _statusText = "";
         } else if (result.status == RESULT_NO_POSITION) {
             _statusText = WatchUi.loadResource(Rez.Strings.StatusNoPosition) as Lang.String;
@@ -143,51 +171,73 @@ class TempustView extends WatchUi.View {
         var width = dc.getWidth();
         var height = dc.getHeight();
 
-        dc.drawText(
-            width / 2, height * 0.13,
-            Graphics.FONT_SMALL,
-            WatchUi.loadResource(Rez.Strings.LabelNearestTemp) as Lang.String,
-            Graphics.TEXT_JUSTIFY_CENTER
-        );
+        // Both bottom rows are anchored from their own measured width
+        // outward (see bottomAnchoredTopY()) and stacked bottom-up, so
+        // whichever one turns out wider - on this device, in whatever
+        // language - can never end up overlapping the other. Computed
+        // up front so the graph below can be sized to stop clear of
+        // them, whatever position they land on.
+        var attributionText = "Data: temperatur.nu";
+        var attribDims = dc.getTextDimensions(attributionText, Graphics.FONT_XTINY);
+        var attribTopY = bottomAnchoredTopY(dc, attributionText, Graphics.FONT_XTINY, height - attribDims[1]);
+
+        var hintText = WatchUi.loadResource(Rez.Strings.HintRefresh) as Lang.String;
+        var hintDims = dc.getTextDimensions(hintText, Graphics.FONT_XTINY);
+        var hintTopY = bottomAnchoredTopY(dc, hintText, Graphics.FONT_XTINY, attribTopY - ROW_GAP_PX - hintDims[1]);
 
         if (_statusText.length() > 0) {
-            dc.drawText(
-                width / 2, height / 2,
+            drawSafeText(
+                dc, height / 2,
                 Graphics.FONT_MEDIUM,
                 _statusText,
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
             );
         } else {
-            dc.drawText(
-                width / 2, height * 0.44,
+            drawSafeText(
+                dc, height * 0.20,
                 Graphics.FONT_NUMBER_MEDIUM,
                 formatTemperature(),
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
             );
-            dc.drawText(
-                width / 2, height * 0.68,
+            drawSafeText(
+                dc, height * 0.33,
                 Graphics.FONT_XTINY,
                 _stationName,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+
+            var graphTop = height * GRAPH_TOP_FRACTION;
+            var graphBottom = hintTopY - ROW_GAP_PX;
+            if (graphBottom > graphTop) {
+                // Chord width shrinks the further a row sits from the
+                // vertical center, so the tighter of the graph's top
+                // and bottom edges is what has to fit - same reasoning
+                // as drawSafeText(), just for a box instead of a text
+                // baseline.
+                var graphHalfWidth = safeHalfWidthAt(dc, graphTop);
+                var bottomHalfWidth = safeHalfWidthAt(dc, graphBottom);
+                if (bottomHalfWidth < graphHalfWidth) {
+                    graphHalfWidth = bottomHalfWidth;
+                }
+
+                drawTemperatureGraph(
+                    dc,
+                    (width / 2.0) - graphHalfWidth, graphTop,
+                    graphHalfWidth * 2, graphBottom - graphTop,
+                    _historyCelsius,
+                    Graphics.COLOR_ORANGE,
+                    Graphics.COLOR_DK_GRAY
+                );
+            }
         }
 
-        dc.drawText(
-            width / 2, height * 0.85,
-            Graphics.FONT_XTINY,
-            WatchUi.loadResource(Rez.Strings.HintRefresh) as Lang.String,
-            Graphics.TEXT_JUSTIFY_CENTER
-        );
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+        dc.drawText(width / 2, hintTopY, Graphics.FONT_XTINY, hintText, Graphics.TEXT_JUSTIFY_CENTER);
 
         // Required-by-terms attribution for the data source (see
         // README) - kept small so it doesn't compete with the actual
         // reading, but always visible while a reading is shown.
-        dc.drawText(
-            width / 2, height * 0.95,
-            Graphics.FONT_XTINY,
-            "Data: temperatur.nu",
-            Graphics.TEXT_JUSTIFY_CENTER
-        );
+        dc.drawText(width / 2, attribTopY, Graphics.FONT_XTINY, attributionText, Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     // Renders "sauna mode": how many degrees the current reading is
@@ -198,8 +248,8 @@ class TempustView extends WatchUi.View {
         var height = dc.getHeight();
 
         dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_BLACK);
-        dc.drawText(
-            width / 2, height * 0.15,
+        drawSafeText(
+            dc, height * 0.15,
             Graphics.FONT_SMALL,
             WatchUi.loadResource(Rez.Strings.EasterEggTitle) as Lang.String,
             Graphics.TEXT_JUSTIFY_CENTER
@@ -207,8 +257,8 @@ class TempustView extends WatchUi.View {
 
         if (_temperatureCelsius == null) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-            dc.drawText(
-                width / 2, height / 2,
+            drawSafeText(
+                dc, height / 2,
                 Graphics.FONT_SMALL,
                 WatchUi.loadResource(Rez.Strings.EasterEggNoData) as Lang.String,
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
@@ -226,14 +276,14 @@ class TempustView extends WatchUi.View {
         var suffix = WatchUi.loadResource(Rez.Strings.EasterEggSuffix) as Lang.String;
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(
-            width / 2, height * 0.4,
+        drawSafeText(
+            dc, height * 0.4,
             Graphics.FONT_NUMBER_MEDIUM,
             delta.format("%.0f") + "°",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
         );
-        dc.drawText(
-            width / 2, height * 0.56,
+        drawSafeText(
+            dc, height * 0.56,
             Graphics.FONT_XTINY,
             prefix + delta.format("%.0f") + "°C" + suffix,
             Graphics.TEXT_JUSTIFY_CENTER
@@ -250,18 +300,34 @@ class TempustView extends WatchUi.View {
             flames = 0;
         }
 
-        var spacing = width / 6;
-        var startX = (width / 2) - (spacing * (flames - 1) / 2);
         var flameY = (height * 0.72).toNumber();
+
+        // Widest layout (5 flames at the default width/6 spacing) can
+        // run past a round bezel on smaller screens, so cap the span to
+        // whatever's actually safe at this row - leaving room for each
+        // flame's own width (FLAME_SIZE * 0.6 either side of its
+        // center), not just the row of flame centers.
+        var safeHalfSpan = safeHalfWidthAt(dc, flameY) - (FLAME_SIZE * 0.6);
+        if (safeHalfSpan < 0) {
+            safeHalfSpan = 0.0;
+        }
+        var spacing = width / 6;
+        if (flames > 1) {
+            var maxSpacing = ((safeHalfSpan * 2) / (flames - 1)).toNumber();
+            if (spacing > maxSpacing) {
+                spacing = maxSpacing;
+            }
+        }
+        var startX = (width / 2) - (spacing * (flames - 1) / 2);
         var i = 0;
         while (i < flames) {
-            drawFlame(dc, startX + i * spacing, flameY, 10, Graphics.COLOR_ORANGE);
+            drawFlame(dc, startX + i * spacing, flameY, FLAME_SIZE, Graphics.COLOR_ORANGE);
             i += 1;
         }
 
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-        dc.drawText(
-            width / 2, height * 0.88,
+        drawSafeText(
+            dc, height * 0.88,
             Graphics.FONT_XTINY,
             WatchUi.loadResource(Rez.Strings.EasterEggFooter) as Lang.String,
             Graphics.TEXT_JUSTIFY_CENTER
@@ -283,23 +349,136 @@ dc.fillPolygon([
 ]);
     }
 
+    // How far (in pixels) content can extend left/right of the
+    // horizontal center at vertical position y while staying clear of
+    // a round/semi-round bezel, with BEZEL_MARGIN_PX of slack. Chord
+    // width shrinks the further y sits from the vertical center, which
+    // is what the 24h graph and the easter egg's flame row use this
+    // for - drawSafeText() below does the equivalent math itself since
+    // it also needs to know its own text's on-screen vertical center
+    // first. Rectangular screens always get the untouched half-width.
+    private function safeHalfWidthAt(dc as Graphics.Dc, y as Lang.Numeric) as Lang.Float {
+        var width = dc.getWidth();
+        var height = dc.getHeight();
+        var half = width / 2.0;
+
+        var shape = System.getDeviceSettings().screenShape;
+        if (shape == System.SCREEN_SHAPE_ROUND || shape == System.SCREEN_SHAPE_SEMI_ROUND) {
+            var radius = half;
+            var offset = y - (height / 2.0);
+            if (offset < 0) {
+                offset = -offset;
+            }
+            if (offset >= radius) {
+                return 0.0;
+            }
+            var chordHalf = Math.sqrt((radius * radius) - (offset * offset)) as Lang.Float;
+            if (chordHalf < half) {
+                half = chordHalf;
+            }
+        }
+
+        return half - BEZEL_MARGIN_PX;
+    }
+
+    // Inverse of safeHalfWidthAt(): the largest |y - center| at which
+    // content halfWidth pixels wide (each side of center) still clears
+    // a round/semi-round bezel, with BEZEL_MARGIN_PX of slack. On a
+    // rectangular screen there's no bezel to avoid, so the full
+    // available half-height is returned unconditionally.
+    private function maxSafeOffsetFor(dc as Graphics.Dc, halfWidth as Lang.Float) as Lang.Float {
+        var width = dc.getWidth();
+        var height = dc.getHeight();
+
+        var shape = System.getDeviceSettings().screenShape;
+        if (shape != System.SCREEN_SHAPE_ROUND && shape != System.SCREEN_SHAPE_SEMI_ROUND) {
+            return height / 2.0;
+        }
+
+        var radius = width / 2.0;
+        var needed = halfWidth + BEZEL_MARGIN_PX;
+        if (needed >= radius) {
+            return 0.0;
+        }
+        return Math.sqrt((radius * radius) - (needed * needed)) as Lang.Float;
+    }
+
+    // Top-anchored y (matches TEXT_JUSTIFY_CENTER without VCENTER) that
+    // puts `text` as close to the screen's bottom edge as its own
+    // measured width allows on this device's bezel, but never lower
+    // than `belowY`.
+    //
+    // This is what onUpdate() uses to stack the hint and attribution
+    // rows bottom-up: each is placed from its own measured width
+    // outward rather than a guessed height fraction, so however wide a
+    // given string turns out to be - a longer translation, a bigger
+    // font on some device - it can't silently overlap the row above
+    // it or get clipped by the bezel. A fixed-fraction placement (the
+    // previous approach here) can't make that guarantee: a wide string
+    // parked close to a round edge needs far more clearance than its
+    // height fraction alone suggests, and unlike a single isolated
+    // drawSafeText() call it has neighbors that need to stay clear too.
+    private function bottomAnchoredTopY(dc as Graphics.Dc, text as Lang.String, font as Graphics.FontType, belowY as Lang.Numeric) as Lang.Float {
+        var height = dc.getHeight();
+        var dims = dc.getTextDimensions(text, font);
+        var halfWidth = dims[0] / 2.0;
+        var textHeight = dims[1];
+
+        var idealCenterY = (height / 2.0) + maxSafeOffsetFor(dc, halfWidth);
+        var idealTopY = idealCenterY - (textHeight / 2.0);
+
+        return (idealTopY < belowY) ? idealTopY : (belowY as Lang.Float);
+    }
+
+    // Horizontally-centered dc.drawText(), nudged toward the vertical
+    // center just far enough to clear a round/semi-round bezel.
+    //
+    // Several rows here are deliberately parked close to the very top
+    // or bottom of the screen (e.g. the attribution line at 95% of
+    // height), but on a round display the usable width shrinks fast
+    // away from the vertical center - a chord near the edge can be
+    // well under half the screen's diameter. Every device in this
+    // widget's compatible-devices list is round or semi-round, so
+    // without this, edge rows silently clip off the sides of the
+    // display. Rectangular screens are unaffected: the chord check
+    // only ever moves text on round/semi-round shapes.
+    private function drawSafeText(dc as Graphics.Dc, y as Lang.Numeric, font as Graphics.FontType, text as Lang.String, justify as Lang.Number) as Void {
+        var width = dc.getWidth();
+        var height = dc.getHeight();
+        var safeY = y;
+
+        var shape = System.getDeviceSettings().screenShape;
+        if (shape == System.SCREEN_SHAPE_ROUND || shape == System.SCREEN_SHAPE_SEMI_ROUND) {
+            var dims = dc.getTextDimensions(text, font);
+            var textWidth = dims[0];
+            var textHeight = dims[1];
+
+            var vCentered = (justify & Graphics.TEXT_JUSTIFY_VCENTER) != 0;
+            var textCenterY = vCentered ? y : y + (textHeight / 2.0);
+
+            var radius = width / 2.0;
+            var halfNeeded = (textWidth / 2.0) + BEZEL_MARGIN_PX;
+            if (halfNeeded < radius) {
+                var maxOffset = Math.sqrt((radius * radius) - (halfNeeded * halfNeeded)) as Lang.Float;
+                var offset = textCenterY - (height / 2.0);
+                if (offset > maxOffset) {
+                    safeY = y - (offset - maxOffset);
+                } else if (offset < -maxOffset) {
+                    safeY = y - (offset + maxOffset);
+                }
+            }
+            // else: this text is wider than the screen's diameter (minus
+            // margin) at any height on this device - repositioning can't
+            // help, so it's left where it was asked to be drawn.
+        }
+
+        dc.drawText(width / 2, safeY, font, text, justify);
+    }
+
     // Converts the stored Celsius reading to whichever unit the user
     // picked in the widget's settings (default: Celsius) and formats
     // it for display with one decimal place.
     private function formatTemperature() as Lang.String {
-        if (_temperatureCelsius == null) {
-            return "--";
-        }
-
-        var unit = Properties.getValue("TempUnit") as Lang.Number;
-        var value = _temperatureCelsius as Lang.Float;
-        var suffix = "°C";
-
-        if (unit == UNIT_FAHRENHEIT) {
-            value = value * 9.0 / 5.0 + 32.0;
-            suffix = "°F";
-        }
-
-        return value.format("%.1f") + suffix;
+        return formatTemperatureCelsius(_temperatureCelsius);
     }
 }

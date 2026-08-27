@@ -23,6 +23,16 @@ function getInitialView() as [WatchUi.Views] or [WatchUi.Views, WatchUi.InputDel
     return [ _view, new TempustDelegate(_view) ] as [WatchUi.Views, WatchUi.InputDelegates];
 }
 
+    // Called by the system to populate this widget's row on the glance
+    // list (fenix 6+ and other Glance-capable devices). Kept as its own
+    // tiny view/class (TempustGlanceView) rather than reusing TempustView,
+    // since glance mode can run with as little as 32KB of memory - see
+    // Core Topics > Glances in the Connect IQ SDK docs.
+    (:glance)
+    function getGlanceView() as [ WatchUi.GlanceView ] or [ WatchUi.GlanceView, WatchUi.GlanceViewDelegate ] or Null {
+        return [ new TempustGlanceView() ];
+    }
+
     // Called automatically whenever the user changes a setting for this
     // app in Garmin Connect Mobile / Garmin Express (e.g. the
     // Celsius/Fahrenheit picker). We forward it to the view so the

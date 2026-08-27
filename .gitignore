@@ -1,5 +1,6 @@
 # Build output
 bin/
+*.iq
 
 # Never commit your signing key
 *.der
