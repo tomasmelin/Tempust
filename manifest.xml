@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
-    <iq:application entry="TempustApp" id="1de83b78-c0ce-40c0-b717-0f98fdb37f48" launcherIcon="@Drawables.LauncherIcon" minSdkVersion="4.2.0" name="@Strings.AppName" type="widget" version="1.0.0">
+    <iq:application entry="TempustApp" id="1de83b78-c0ce-40c0-b717-0f98fdb37f48" launcherIcon="@Drawables.LauncherIcon" minSdkVersion="3.1.8" name="@Strings.AppName" type="widget" version="1.0.0">
         <!--
             NOTE: replace the placeholder "id" above with the real UUID
             that the Connect IQ SDK generates automatically when you
@@ -8,48 +8,114 @@
             (see README).
         -->
         <!--
-            Broad list of current GPS-capable, Connect IQ 4+ devices
-            that support the Positioning + Communications permissions
-            this app needs (running/multisport watches only - plain
-            activity trackers without GPS are intentionally excluded,
-            since the app can't function on them).
+            minSdkVersion is 3.1.8, not the SDK's newer default -
+            that's the exact API level this app's tightest real
+            dependency needs (Graphics.FONT_GLANCE, used by the glance
+            view). Everything else this app uses (Position, Timer,
+            Communications, App.Properties, GlanceView itself at
+            3.1.0) is available at or below that level, so 3.1.8 is
+            the lowest value that's actually safe - not a arbitrary
+            pick.
 
-            IMPORTANT: Garmin adds new watches and occasionally tweaks
-            product-id strings over time, and the SDK validates every
-            id against its own device database at build time (an
-            unknown id fails the build, so nothing here can "silently"
-            break). Before publishing, open this project in the VS
-            Code Monkey C extension and use "Edit Compatible Devices" /
-            the device picker in the export wizard to confirm this
-            list against the current full catalog and add anything
-            new - that UI is the authoritative source, this list is a
-            solid starting point, not the final word.
+            IMPORTANT, if you ever change minSdkVersion: this app
+            mixes an optional (:glance) getGlanceView() override into
+            TempustApp, the app's entry point class. On this SDK
+            (9.2.0), setting minSdkVersion below GlanceView's own
+            minimum (3.1.0) doesn't just drop glance support - it can
+            break the ENTIRE entry point on some devices with an
+            unrelated-looking "Cannot find entry point class" or
+            "Undefined symbol" error (confirmed by testing 3.0.0 and
+            3.2.0 against this exact codebase; only versions in
+            GlanceView's actual supported range, like this one, built
+            cleanly everywhere). If you lower this value, retest a
+            broad device sample individually (-d <device>), not just
+            the device your simulator happens to be running, and don't
+            assume a clean build stays clean at every value.
+        -->
+        <!--
+            Every device in the installed SDK's database (165 entries)
+            that (a) supports the Widget app type and (b) actually
+            builds against minSdkVersion above - checked by compiling
+            individually for each one, not guessed. That's the
+            practical definition of "reasonable Garmin devices for
+            this kind of app" used here: this widget needs GPS +
+            network access + a way to appear on the device, and every
+            device meeting all three ended up on this list - watches,
+            handheld GPS units (GPSMAP, Montana, eTrex Touch), and bike
+            computers (Edge) alike, since ambient temperature is
+            useful on all of them.
+
+            Excluded, and why:
+            - Devices without Widget support at all (mostly Garmin's
+              non-GPS fitness bands - vivomove/vivosmart/vivofit/Lily -
+              which don't offer Widget as an app type in the first
+              place, so they were never candidates).
+            - Devices whose firmware doesn't reach API level 3.1.8:
+              fenix3/5(base)/6(pre-Pro on some sizes)/Chronos, several
+              early Approach/D2/Edge/Forerunner/GPSMAP/vivoactive
+              models, etc. - confirmed by compiling for each one
+              individually, not by version-number guessing.
+            - "bounce2" doesn't exist as a compiler-recognized product
+              id in this SDK despite having a device reference page -
+              left out rather than guessing at an alternate id.
+
+            Garmin adds new watches and occasionally tweaks product-id
+            strings over time, and the SDK validates every id against
+            its own device database at build time (an unknown id fails
+            the build immediately, so nothing here can go stale
+            silently in that sense) - but devices released after this
+            SDK version obviously won't be in this list yet. Before
+            publishing, open this project in the VS Code Monkey C
+            extension and use "Edit Compatible Devices" to check
+            against the current catalog.
         -->
         <iq:products>
-            <!-- Forerunner -->
-            <!--
-        fenix - every fenix7/8-generation id in the installed SDK's
-        device database as of this writing, including fenix E, plus
-        the no-WiFi 7 Pro variants. Bare ids like "fenix6x" or "fenix8"
-        don't exist in this SDK - Garmin splits by size/material
-        instead (fenix6xpro, fenix843mm/847mm, etc.).
-
-        fenix3, fenix3_hr, fenix5-family, fenix6-family and fenix
-        Chronos are NOT included: the compiler hard-errors on them -
-        "Device 'fenixN' does not support API Level '4.2.0'" - because
-        those devices predate this app's minSdkVersion (set above).
-        To add them back you'd need to lower minSdkVersion project-wide
-        (affecting every device here, not just these) and re-verify
-        every API this app uses is actually available that far back -
-        deliberately not done here without that check. tactix/quatix/
-        enduro share hardware with several fenix generations but are
-        intentionally left out here too - they're their own product
-        line, add them separately if you want to support them.
-    -->
-            <!-- epix / MARQ -->
-            <!-- vivoactive / Venu -->
-            <!-- Descent (dive computers, also used for general GPS wear) -->
+            <iq:product id="approachs50"/>
+            <iq:product id="approachs7042mm"/>
+            <iq:product id="approachs7047mm"/>
+            <iq:product id="d2air"/>
+            <iq:product id="d2airx10"/>
+            <iq:product id="d2delta"/>
+            <iq:product id="d2deltapx"/>
+            <iq:product id="d2deltas"/>
+            <iq:product id="d2mach1"/>
+            <iq:product id="d2mach2"/>
+            <iq:product id="d2mach2pro"/>
+            <iq:product id="descentg1"/>
+            <iq:product id="descentg2"/>
+            <iq:product id="descentmk1"/>
+            <iq:product id="descentmk2"/>
+            <iq:product id="descentmk2s"/>
+            <iq:product id="descentmk343mm"/>
+            <iq:product id="descentmk351mm"/>
+            <iq:product id="edge1030"/>
+            <iq:product id="edge1030bontrager"/>
+            <iq:product id="edge1030plus"/>
+            <iq:product id="edge1040"/>
+            <iq:product id="edge1050"/>
+            <iq:product id="edge530"/>
+            <iq:product id="edge540"/>
+            <iq:product id="edge550"/>
+            <iq:product id="edge830"/>
+            <iq:product id="edge840"/>
+            <iq:product id="edge850"/>
+            <iq:product id="edgeexplore2"/>
+            <iq:product id="edgemtb"/>
+            <iq:product id="enduro"/>
+            <iq:product id="enduro3"/>
             <iq:product id="epix2"/>
+            <iq:product id="epix2pro42mm"/>
+            <iq:product id="epix2pro47mm"/>
+            <iq:product id="epix2pro51mm"/>
+            <iq:product id="etrextouch"/>
+            <iq:product id="fenix5plus"/>
+            <iq:product id="fenix5splus"/>
+            <iq:product id="fenix5xplus"/>
+            <iq:product id="fenix6"/>
+            <iq:product id="fenix6pro"/>
+            <iq:product id="fenix6s"/>
+            <iq:product id="fenix6spro"/>
+            <iq:product id="fenix6xpro"/>
             <iq:product id="fenix7"/>
             <iq:product id="fenix7pro"/>
             <iq:product id="fenix7pronowifi"/>
@@ -64,19 +130,75 @@
             <iq:product id="fenix8solar47mm"/>
             <iq:product id="fenix8solar51mm"/>
             <iq:product id="fenixe"/>
+            <iq:product id="fr165"/>
+            <iq:product id="fr165m"/>
+            <iq:product id="fr245"/>
+            <iq:product id="fr245m"/>
             <iq:product id="fr255"/>
+            <iq:product id="fr255m"/>
             <iq:product id="fr255s"/>
+            <iq:product id="fr255sm"/>
             <iq:product id="fr265"/>
             <iq:product id="fr265s"/>
+            <iq:product id="fr55"/>
+            <iq:product id="fr57042mm"/>
+            <iq:product id="fr57047mm"/>
+            <iq:product id="fr645"/>
+            <iq:product id="fr645m"/>
+            <iq:product id="fr745"/>
+            <iq:product id="fr945"/>
+            <iq:product id="fr945lte"/>
             <iq:product id="fr955"/>
             <iq:product id="fr965"/>
+            <iq:product id="fr970"/>
+            <iq:product id="gpsmap66"/>
+            <iq:product id="gpsmap67"/>
+            <iq:product id="gpsmaph1"/>
+            <iq:product id="instinct2"/>
+            <iq:product id="instinct2s"/>
+            <iq:product id="instinct2x"/>
+            <iq:product id="instinct3amoled45mm"/>
+            <iq:product id="instinct3amoled50mm"/>
+            <iq:product id="instinct3solar45mm"/>
+            <iq:product id="instinctcrossover"/>
+            <iq:product id="instinctcrossoveramoled"/>
+            <iq:product id="instincte40mm"/>
+            <iq:product id="instincte45mm"/>
+            <iq:product id="legacyherocaptainmarvel"/>
+            <iq:product id="legacyherofirstavenger"/>
+            <iq:product id="legacysagadarthvader"/>
+            <iq:product id="legacysagarey"/>
             <iq:product id="marq2"/>
+            <iq:product id="marq2aviator"/>
+            <iq:product id="marqadventurer"/>
+            <iq:product id="marqathlete"/>
+            <iq:product id="marqaviator"/>
+            <iq:product id="marqcaptain"/>
+            <iq:product id="marqcommander"/>
+            <iq:product id="marqdriver"/>
+            <iq:product id="marqexpedition"/>
+            <iq:product id="marqgolfer"/>
+            <iq:product id="montana7xx"/>
+            <iq:product id="venu"/>
             <iq:product id="venu2"/>
             <iq:product id="venu2plus"/>
             <iq:product id="venu2s"/>
             <iq:product id="venu3"/>
             <iq:product id="venu3s"/>
+            <iq:product id="venu441mm"/>
+            <iq:product id="venu445mm"/>
+            <iq:product id="venud"/>
+            <iq:product id="venusq"/>
+            <iq:product id="venusq2"/>
+            <iq:product id="venusq2m"/>
+            <iq:product id="venusqm"/>
+            <iq:product id="venux1"/>
+            <iq:product id="vivoactive3"/>
+            <iq:product id="vivoactive3m"/>
+            <iq:product id="vivoactive4"/>
+            <iq:product id="vivoactive4s"/>
             <iq:product id="vivoactive5"/>
+            <iq:product id="vivoactive6"/>
         </iq:products>
         <iq:permissions>
             <iq:uses-permission id="Communications"/>

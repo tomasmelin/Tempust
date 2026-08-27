@@ -21,10 +21,11 @@ API, based on the watch's GPS position.
   The app only converts for display if the user picked Fahrenheit.
   Changing the setting while the widget is open updates the reading
   immediately, via `onSettingsChanged()`.
-- **Broader device support:** `manifest.xml` now lists a wide range of
-  GPS watches (Forerunner, fenix, epix, MARQ, tactix, enduro,
-  vivoactive, Venu, Descent) instead of just the fr965 – see "Device
-  support" below for how to validate this list before publishing.
+- **Broad device support:** `manifest.xml` lists every GPS-capable,
+  Widget-supporting device in the SDK catalog that actually compiles
+  against this app's `minSdkVersion` (watches, handheld GPS units, and
+  bike computers alike) instead of just the fr965 – see "Device
+  support" below for what's included/excluded and why.
 - **Attribution:** a small "Data: temperatur.nu" line is shown at the
   bottom of the widget whenever a reading is displayed, to satisfy
   temperatur.nu's terms of use around crediting the source.
@@ -57,25 +58,48 @@ and rely on the phone's connection.
 
 ## Device support
 
-`manifest.xml` now contains a broad, but **not guaranteed complete or
-100% accurate**, list of GPS watches that support widgets +
-Positioning + Communications. Why I'm not just guessing every Garmin
-watch ever made: the SDK validates every `product id` against its own
-device database at build time, so a misspelled or outdated id makes
-the build fail immediately (nothing breaks silently) – but the list
-may still be missing watches released after my knowledge, or contain
-the occasional wrong exact id.
+`manifest.xml` lists every device in the SDK's catalog that (a)
+supports the Widget app type and (b) actually compiles against this
+app's `minSdkVersion` (3.1.8) - checked by compiling individually for
+each one, not by guessing from a device's release date or product
+line. That covers watches (Forerunner, fenix, epix, MARQ, tactix,
+enduro, vivoactive, Venu, Instinct, D2, Approach, Descent), handheld
+GPS units (GPSMAP, Montana, eTrex Touch), and bike computers (Edge)
+alike - this widget only needs GPS + network access + a way to appear
+on the device, and ambient temperature is useful information on all
+of them, not just watches.
+
+**`minSdkVersion` is 3.1.8, not the SDK's current default** - that's
+the exact API level this app's tightest real dependency needs
+(`Graphics.FONT_GLANCE`, used by the glance view). Don't lower it
+without retesting broadly: this app mixes an optional `(:glance)`
+`getGlanceView()` override into `TempustApp` (the entry point class),
+and on SDK 9.2.0, setting `minSdkVersion` below `GlanceView`'s own
+minimum (3.1.0) doesn't just disable the glance - on some devices it
+breaks the *entire* entry point with an unrelated-looking "Cannot find
+entry point class" or "Undefined symbol" error. That's a real, testing
+-confirmed failure mode (see the comment above `minSdkVersion` in
+`manifest.xml`), not a hypothetical.
+
+**Devices without GPS** (e.g. plain activity trackers like the
+vivosmart/vivomove/vivofit lines) are excluded - they don't offer the
+Widget app type at all, so they were never candidates in the first
+place, not a manual exclusion.
+
+**On a few devices** (mostly older ones - D2 Air/Delta, Edge 1030-era,
+eTrex Touch, GPSMAP, some fenix 5 Plus/vivoactive 3/4 variants), the
+build emits a `(:glance) annotation will be ignored` warning: those
+specific devices' Widget-Glance support needs a higher API level than
+3.1.8, so they fall back to Connect IQ's default glance behavior (just
+showing the app name) instead of this app's custom temp+graph glance.
+The full widget itself is unaffected - this is graceful degradation,
+not a bug.
 
 **Before publishing:** open the project in VS Code (Monkey C
 extension) and use **"Edit Compatible Devices"** (or the device picker
-in the export wizard) – it lists Garmin's current, complete device
-catalog and lets you check devices in/out visually. Use that to verify
-and extend the list in `manifest.xml`, rather than relying fully on
-the list here.
-
-Devices **without GPS** (e.g. plain activity trackers like the
-vivosmart) are intentionally excluded, since the app can't function
-without a position.
+in the export wizard) to check this list against the current catalog -
+Garmin releases new devices faster than any static list can track, and
+occasionally tweaks product-id strings for existing ones.
 
 ## Building and installing the app
 

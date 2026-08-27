@@ -1,5 +1,153 @@
 project.manifest = manifest.xml
 
-# Default source/resource paths (source/**, resources/**) already match
-# this project's layout, so nothing else is needed here. See
-# LOCAL_SETUP.md if you want to understand what this file is for.
+# Default source path (source/**) already matches this project's
+# layout. Resource path is spelled out explicitly (rather than left
+# implicit) because the per-device lines below need $(base.resourcePath)
+# to build on. See LOCAL_SETUP.md if you want to understand what this
+# file is for in general.
+base.resourcePath = resources
+
+# Per-device launcher icon overrides.
+#
+# The base drawables (resources/drawables/launcher_icon.png) are 80x80
+# and get auto-scaled by the resource compiler for every device - that
+# works fine functionally, but produces a build-time warning for every
+# device whose actual launcher icon slot isn't 80x80 (nearly all of
+# them; sizes range from 26x26 to 70x70 across this app's device list).
+#
+# These lines route each device to a resources-icon<W>x<H>/ folder
+# containing a pre-sized launcher_icon.png at its exact slot size,
+# eliminating the warning. Generated from each device's "Launcher Icon
+# Size" (Device Reference docs) - if you add a new product id to
+# manifest.xml, either add a matching line here (check its icon size in
+# the Connect IQ device reference) or accept the harmless warning for
+# it.
+approachs50.resourcePath = $(base.resourcePath);resources-icon56x56
+approachs7042mm.resourcePath = $(base.resourcePath);resources-icon60x60
+approachs7047mm.resourcePath = $(base.resourcePath);resources-icon70x70
+d2air.resourcePath = $(base.resourcePath);resources-icon60x60
+d2airx10.resourcePath = $(base.resourcePath);resources-icon70x70
+d2delta.resourcePath = $(base.resourcePath);resources-icon40x40
+d2deltapx.resourcePath = $(base.resourcePath);resources-icon40x40
+d2deltas.resourcePath = $(base.resourcePath);resources-icon40x40
+d2mach1.resourcePath = $(base.resourcePath);resources-icon60x60
+d2mach2.resourcePath = $(base.resourcePath);resources-icon65x65
+d2mach2pro.resourcePath = $(base.resourcePath);resources-icon65x65
+descentg1.resourcePath = $(base.resourcePath);resources-icon62x62
+descentg2.resourcePath = $(base.resourcePath);resources-icon60x60
+descentmk1.resourcePath = $(base.resourcePath);resources-icon40x40
+descentmk2.resourcePath = $(base.resourcePath);resources-icon40x40
+descentmk2s.resourcePath = $(base.resourcePath);resources-icon40x40
+descentmk343mm.resourcePath = $(base.resourcePath);resources-icon60x60
+descentmk351mm.resourcePath = $(base.resourcePath);resources-icon60x60
+edge1030.resourcePath = $(base.resourcePath);resources-icon36x36
+edge1030bontrager.resourcePath = $(base.resourcePath);resources-icon36x36
+edge1030plus.resourcePath = $(base.resourcePath);resources-icon36x36
+edge1040.resourcePath = $(base.resourcePath);resources-icon40x40
+edge1050.resourcePath = $(base.resourcePath);resources-icon68x68
+edge530.resourcePath = $(base.resourcePath);resources-icon35x35
+edge540.resourcePath = $(base.resourcePath);resources-icon35x35
+edge550.resourcePath = $(base.resourcePath);resources-icon56x56
+edge830.resourcePath = $(base.resourcePath);resources-icon35x35
+edge840.resourcePath = $(base.resourcePath);resources-icon35x35
+edge850.resourcePath = $(base.resourcePath);resources-icon56x56
+edgeexplore2.resourcePath = $(base.resourcePath);resources-icon36x36
+edgemtb.resourcePath = $(base.resourcePath);resources-icon36x36
+enduro.resourcePath = $(base.resourcePath);resources-icon40x40
+enduro3.resourcePath = $(base.resourcePath);resources-icon40x40
+epix2.resourcePath = $(base.resourcePath);resources-icon60x60
+epix2pro42mm.resourcePath = $(base.resourcePath);resources-icon60x60
+epix2pro47mm.resourcePath = $(base.resourcePath);resources-icon60x60
+epix2pro51mm.resourcePath = $(base.resourcePath);resources-icon60x60
+etrextouch.resourcePath = $(base.resourcePath);resources-icon38x33
+fenix5plus.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix5splus.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix5xplus.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix6.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix6pro.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix6s.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix6spro.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix6xpro.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix7.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix7pro.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix7pronowifi.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix7s.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix7spro.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix7x.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix7xpro.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix7xpronowifi.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix843mm.resourcePath = $(base.resourcePath);resources-icon60x60
+fenix847mm.resourcePath = $(base.resourcePath);resources-icon65x65
+fenix8pro47mm.resourcePath = $(base.resourcePath);resources-icon65x65
+fenix8solar47mm.resourcePath = $(base.resourcePath);resources-icon40x40
+fenix8solar51mm.resourcePath = $(base.resourcePath);resources-icon40x40
+fenixe.resourcePath = $(base.resourcePath);resources-icon60x60
+fr165.resourcePath = $(base.resourcePath);resources-icon54x54
+fr165m.resourcePath = $(base.resourcePath);resources-icon54x54
+fr245.resourcePath = $(base.resourcePath);resources-icon40x40
+fr245m.resourcePath = $(base.resourcePath);resources-icon40x40
+fr255.resourcePath = $(base.resourcePath);resources-icon40x40
+fr255m.resourcePath = $(base.resourcePath);resources-icon40x40
+fr255s.resourcePath = $(base.resourcePath);resources-icon40x40
+fr255sm.resourcePath = $(base.resourcePath);resources-icon40x40
+fr265.resourcePath = $(base.resourcePath);resources-icon60x60
+fr265s.resourcePath = $(base.resourcePath);resources-icon60x60
+fr55.resourcePath = $(base.resourcePath);resources-icon35x35
+fr57042mm.resourcePath = $(base.resourcePath);resources-icon54x54
+fr57047mm.resourcePath = $(base.resourcePath);resources-icon65x65
+fr645.resourcePath = $(base.resourcePath);resources-icon40x40
+fr645m.resourcePath = $(base.resourcePath);resources-icon40x40
+fr745.resourcePath = $(base.resourcePath);resources-icon40x40
+fr945.resourcePath = $(base.resourcePath);resources-icon40x40
+fr945lte.resourcePath = $(base.resourcePath);resources-icon40x40
+fr955.resourcePath = $(base.resourcePath);resources-icon40x40
+fr965.resourcePath = $(base.resourcePath);resources-icon65x65
+fr970.resourcePath = $(base.resourcePath);resources-icon65x65
+gpsmap66.resourcePath = $(base.resourcePath);resources-icon38x33
+gpsmap67.resourcePath = $(base.resourcePath);resources-icon38x33
+gpsmaph1.resourcePath = $(base.resourcePath);resources-icon32x32
+instinct2.resourcePath = $(base.resourcePath);resources-icon62x62
+instinct2s.resourcePath = $(base.resourcePath);resources-icon54x54
+instinct2x.resourcePath = $(base.resourcePath);resources-icon62x62
+instinct3amoled45mm.resourcePath = $(base.resourcePath);resources-icon60x60
+instinct3amoled50mm.resourcePath = $(base.resourcePath);resources-icon60x60
+instinct3solar45mm.resourcePath = $(base.resourcePath);resources-icon62x62
+instinctcrossover.resourcePath = $(base.resourcePath);resources-icon26x26
+instinctcrossoveramoled.resourcePath = $(base.resourcePath);resources-icon38x38
+instincte40mm.resourcePath = $(base.resourcePath);resources-icon52x52
+instincte45mm.resourcePath = $(base.resourcePath);resources-icon62x62
+legacyherocaptainmarvel.resourcePath = $(base.resourcePath);resources-icon30x30
+legacyherofirstavenger.resourcePath = $(base.resourcePath);resources-icon35x35
+legacysagadarthvader.resourcePath = $(base.resourcePath);resources-icon35x35
+legacysagarey.resourcePath = $(base.resourcePath);resources-icon30x30
+marq2.resourcePath = $(base.resourcePath);resources-icon60x60
+marq2aviator.resourcePath = $(base.resourcePath);resources-icon60x60
+marqadventurer.resourcePath = $(base.resourcePath);resources-icon40x40
+marqathlete.resourcePath = $(base.resourcePath);resources-icon40x40
+marqaviator.resourcePath = $(base.resourcePath);resources-icon40x40
+marqcaptain.resourcePath = $(base.resourcePath);resources-icon40x40
+marqcommander.resourcePath = $(base.resourcePath);resources-icon40x40
+marqdriver.resourcePath = $(base.resourcePath);resources-icon40x40
+marqexpedition.resourcePath = $(base.resourcePath);resources-icon40x40
+marqgolfer.resourcePath = $(base.resourcePath);resources-icon40x40
+montana7xx.resourcePath = $(base.resourcePath);resources-icon60x60
+venu.resourcePath = $(base.resourcePath);resources-icon60x60
+venu2.resourcePath = $(base.resourcePath);resources-icon70x70
+venu2plus.resourcePath = $(base.resourcePath);resources-icon70x70
+venu2s.resourcePath = $(base.resourcePath);resources-icon61x61
+venu3.resourcePath = $(base.resourcePath);resources-icon70x70
+venu3s.resourcePath = $(base.resourcePath);resources-icon70x70
+venu441mm.resourcePath = $(base.resourcePath);resources-icon54x54
+venu445mm.resourcePath = $(base.resourcePath);resources-icon65x65
+venud.resourcePath = $(base.resourcePath);resources-icon60x60
+venusq.resourcePath = $(base.resourcePath);resources-icon36x36
+venusq2.resourcePath = $(base.resourcePath);resources-icon40x40
+venusq2m.resourcePath = $(base.resourcePath);resources-icon40x40
+venusqm.resourcePath = $(base.resourcePath);resources-icon36x36
+venux1.resourcePath = $(base.resourcePath);resources-icon65x65
+vivoactive3.resourcePath = $(base.resourcePath);resources-icon40x33
+vivoactive3m.resourcePath = $(base.resourcePath);resources-icon40x33
+vivoactive4.resourcePath = $(base.resourcePath);resources-icon35x35
+vivoactive4s.resourcePath = $(base.resourcePath);resources-icon30x30
+vivoactive5.resourcePath = $(base.resourcePath);resources-icon56x56
+vivoactive6.resourcePath = $(base.resourcePath);resources-icon54x54
