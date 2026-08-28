@@ -45,8 +45,11 @@ API, based on the watch's GPS position.
    to fetch the station's last ~24h of readings for the trend graph. A
    failure here doesn't affect the current reading - it's shown either
    way, just without a graph underneath.
-4. The temperature is shown at the top with the 24h graph below it -
-   same layout (temp + graph) in both the full widget and its glance.
+4. The full widget shows the temperature at the top with the 24h graph
+   below it. The glance shows a compact one-row summary instead,
+   styled like Connect IQ's own glances (a round icon badge on a blue
+   fading background, matching the look of e.g. the Notifications
+   glance) - there's no room for a graph in a single row.
 5. The widget refreshes automatically every 5 minutes while open (and
    stops polling as soon as you leave it – no background activity), or
    on demand via SELECT. The glance does a single fetch each time it's

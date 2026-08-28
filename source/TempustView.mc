@@ -17,6 +17,18 @@ const REFRESH_INTERVAL_SECONDS = 300;
 // normal temperature display, in milliseconds.
 const EASTER_EGG_DISPLAY_MS = 4000;
 
+// Animation tick rate for the easter egg's flame flicker, in
+// milliseconds. 5fps is plenty for a flicker (real flames aren't
+// smooth anyway) and cheap enough to not be a battery concern for a
+// four-second screen. Reuses the SAME timer that dismisses the easter
+// egg (now repeating instead of one-shot) rather than adding a second
+// one - see the "concurrent timer" note on LOCATION_TIMEOUT_MS in
+// TempustWeatherClient.mc for why that matters: devices only
+// guarantee a handful of simultaneous timers, and this widget already
+// runs close to that ceiling if a fetch is still in flight when the
+// easter egg triggers.
+const EASTER_EGG_FRAME_MS = 200;
+
 // Classic Swedish sauna (bastu) reference temperature, in Celsius,
 // used only for the easter egg's "degrees from a sauna" readout.
 const SAUNA_REFERENCE_CELSIUS = 80.0;
@@ -65,6 +77,8 @@ class TempustView extends WatchUi.View {
 
     private var _easterEggActive as Lang.Boolean = false;
     private var _easterEggTimer as Timer.Timer?;
+    private var _easterEggFrame as Lang.Number = 0;
+    private var _easterEggFramesRemaining as Lang.Number = 0;
 
     function initialize() {
         View.initialize();
@@ -148,19 +162,32 @@ class TempustView extends WatchUi.View {
     // so it can't affect the temperatur.nu rate limit either way.
     function triggerEasterEgg() as Void {
         _easterEggActive = true;
+        _easterEggFrame = 0;
+        _easterEggFramesRemaining = EASTER_EGG_DISPLAY_MS / EASTER_EGG_FRAME_MS;
 
         if (_easterEggTimer != null) {
             _easterEggTimer.stop();
         } else {
             _easterEggTimer = new Timer.Timer();
         }
-        _easterEggTimer.start(method(:onEasterEggExpired), EASTER_EGG_DISPLAY_MS, false);
+        // Repeating, not one-shot: this same tick both drives the
+        // flame-flicker animation (drawEasterEgg() reads
+        // _easterEggFrame) and counts down to dismissal, so the whole
+        // easter egg still costs exactly one timer, same as before.
+        _easterEggTimer.start(method(:onEasterEggFrame), EASTER_EGG_FRAME_MS, true);
 
         WatchUi.requestUpdate();
     }
 
-    function onEasterEggExpired() as Void {
-        _easterEggActive = false;
+    function onEasterEggFrame() as Void {
+        _easterEggFrame += 1;
+        _easterEggFramesRemaining -= 1;
+
+        if (_easterEggFramesRemaining <= 0) {
+            (_easterEggTimer as Timer.Timer).stop();
+            _easterEggActive = false;
+        }
+
         WatchUi.requestUpdate();
     }
 
@@ -331,7 +358,14 @@ class TempustView extends WatchUi.View {
         var startX = (width / 2) - (spacing * (flames - 1) / 2);
         var i = 0;
         while (i < flames) {
-            drawFlame(dc, startX + i * spacing, flameY, FLAME_SIZE, Graphics.COLOR_ORANGE);
+            // Each flame flickers independently (offset by index) via
+            // a cheap sine wave on size and a slight vertical bob -
+            // real flames aren't smooth, so EASTER_EGG_FRAME_MS's
+            // modest 5fps still reads fine, for very little CPU cost.
+            var phase = (_easterEggFrame + (i * 3)) * 0.6;
+            var sizeFlicker = (Math.sin(phase) * 1.5).toNumber();
+            var bob = (Math.cos(phase) * 1.0).toNumber();
+            drawFlame(dc, startX + i * spacing, flameY + bob, FLAME_SIZE + sizeFlicker, Graphics.COLOR_ORANGE);
             i += 1;
         }
 
