@@ -73,10 +73,8 @@ class TempustView extends WatchUi.View {
     private var _distanceKm as Lang.Float?;
     private var _stationName as Lang.String = "";
     private var _historyCelsius as Lang.Array<Lang.Float>?;
+    private var _historyWindowHours as Lang.Number?;
     private var _statusText as Lang.String = "";
-    // Temporary diagnostics - see LOCAL_SETUP.md "Console output".
-    // Remove once the graph is confirmed showing in the simulator.
-    private var _debugGraphLogged as Lang.Boolean = false;
 
     private var _easterEggActive as Lang.Boolean = false;
     private var _easterEggTimer as Timer.Timer?;
@@ -144,8 +142,8 @@ class TempustView extends WatchUi.View {
                 ? result.stationName
                 : WatchUi.loadResource(Rez.Strings.UnknownStation) as Lang.String;
             _historyCelsius = result.historyCelsius;
+            _historyWindowHours = result.historyWindowHours;
             _statusText = "";
-            _debugGraphLogged = false;
         } else if (result.status == RESULT_NO_POSITION) {
             _statusText = WatchUi.loadResource(Rez.Strings.StatusNoPosition) as Lang.String;
         } else if (result.status == RESULT_NO_STATION) {
@@ -240,16 +238,30 @@ class TempustView extends WatchUi.View {
             var stationLine = (distanceText.length() > 0)
                 ? _stationName + " · " + distanceText
                 : _stationName;
+            var stationY = height * 0.33;
             drawSafeText(
-                dc, height * 0.33,
+                dc, stationY,
                 Graphics.FONT_XTINY,
                 stationLine,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
 
-            // Fixed vertical band (see GRAPH_TOP/BOTTOM_FRACTION) -
-            // only the horizontal extent adapts to the bezel.
-            var graphTop = height * GRAPH_TOP_FRACTION;
+            // The graph's top edge stays clear of the station line's
+            // own measured height, not just a fixed fraction of screen
+            // height - a fixed fraction assumes the station text never
+            // gets tall enough to reach it, which doesn't hold on
+            // every device/font-size combination (seen in testing: the
+            // graph's first peak overlapping the text above it).
+            // GRAPH_TOP_FRACTION is still the floor, so the graph
+            // doesn't jump up unnecessarily far when the station line
+            // is short.
+            var stationDims = dc.getTextDimensions(stationLine, Graphics.FONT_XTINY);
+            var stationBottom = stationY + stationDims[1];
+            var graphTop = stationBottom + ROW_GAP_PX;
+            if (graphTop < height * GRAPH_TOP_FRACTION) {
+                graphTop = height * GRAPH_TOP_FRACTION;
+            }
+
             var graphBottom = height * GRAPH_BOTTOM_FRACTION;
             // Chord width shrinks the further a row sits from the
             // vertical center, so the tighter of the graph's top and
@@ -262,24 +274,20 @@ class TempustView extends WatchUi.View {
                 graphHalfWidth = bottomHalfWidth;
             }
 
-            if (!_debugGraphLogged) {
-                _debugGraphLogged = true;
-                var pointCount = (_historyCelsius != null) ? _historyCelsius.size() : 0;
-                System.println(
-                    "Tempust: graph box x=" + ((width / 2.0) - graphHalfWidth)
-                    + " y=" + graphTop + " w=" + (graphHalfWidth * 2)
-                    + " h=" + (graphBottom - graphTop) + " points=" + pointCount
-                );
-            }
+            var graphX = (width / 2.0) - graphHalfWidth;
+            var graphW = graphHalfWidth * 2;
+            var graphH = graphBottom - graphTop;
 
             drawTemperatureGraph(
-                dc,
-                (width / 2.0) - graphHalfWidth, graphTop,
-                graphHalfWidth * 2, graphBottom - graphTop,
+                dc, graphX, graphTop, graphW, graphH,
                 _historyCelsius,
                 Graphics.COLOR_ORANGE,
                 Graphics.COLOR_DK_GRAY
             );
+
+            if (graphH > 0) {
+                drawGraphAxisLabels(dc, graphX, graphTop, graphW, graphH);
+            }
         }
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -289,6 +297,50 @@ class TempustView extends WatchUi.View {
         // README) - kept small so it doesn't compete with the actual
         // reading, but always visible while a reading is shown.
         dc.drawText(width / 2, attribTopY, Graphics.FONT_XTINY, attributionText, Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
+    // Minimal axis labels for the graph: the min/max reading in the
+    // bottom/top-left corners, and the time window in the top/bottom-
+    // right corners ("now" is always "now"; the start label reflects
+    // _historyWindowHours, which can be less than 24h if the full
+    // day's raw readings were too large a response to fetch - see
+    // TempustWeatherClient.onReceiveHistory()). Kept to short numbers
+    // at FONT_XTINY - there's no room for more on a graph this size.
+    private function drawGraphAxisLabels(dc as Graphics.Dc, x as Lang.Numeric, y as Lang.Numeric, w as Lang.Numeric, h as Lang.Numeric) as Void {
+        var history = _historyCelsius;
+        if (history == null || history.size() < 2) {
+            return;
+        }
+
+        var minC = history[0] as Lang.Float;
+        var maxC = history[0] as Lang.Float;
+        var i = 1;
+        while (i < history.size()) {
+            var v = history[i] as Lang.Float;
+            if (v < minC) {
+                minC = v;
+            }
+            if (v > maxC) {
+                maxC = v;
+            }
+            i += 1;
+        }
+
+        var pad = 3;
+        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+
+        var maxLabel = formatTemperatureCelsiusRounded(maxC);
+        dc.drawText(x + pad, y + pad, Graphics.FONT_XTINY, maxLabel, Graphics.TEXT_JUSTIFY_LEFT);
+
+        var minLabel = formatTemperatureCelsiusRounded(minC);
+        var minDims = dc.getTextDimensions(minLabel, Graphics.FONT_XTINY);
+        dc.drawText(x + pad, y + h - minDims[1] - pad, Graphics.FONT_XTINY, minLabel, Graphics.TEXT_JUSTIFY_LEFT);
+
+        var startLabel = "-" + ((_historyWindowHours != null) ? _historyWindowHours.toString() : "?") + "h";
+        dc.drawText(x + w - pad, y + pad, Graphics.FONT_XTINY, startLabel, Graphics.TEXT_JUSTIFY_RIGHT);
+
+        var nowDims = dc.getTextDimensions("now", Graphics.FONT_XTINY);
+        dc.drawText(x + w - pad, y + h - nowDims[1] - pad, Graphics.FONT_XTINY, "now", Graphics.TEXT_JUSTIFY_RIGHT);
     }
 
     // Renders "sauna mode": how many degrees the current reading is
