@@ -314,13 +314,13 @@ class TempustView extends WatchUi.View {
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         drawSafeText(
-            dc, height * 0.4,
+            dc, height * 0.37,
             Graphics.FONT_NUMBER_MEDIUM,
             delta.format("%.0f") + "°",
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
         );
         drawSafeText(
-            dc, height * 0.56,
+            dc, height * 0.58,
             Graphics.FONT_XTINY,
             prefix + delta.format("%.0f") + "°C" + suffix,
             Graphics.TEXT_JUSTIFY_CENTER
