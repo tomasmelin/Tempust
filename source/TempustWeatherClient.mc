@@ -3,7 +3,6 @@ import Toybox.Position;
 import Toybox.Lang;
 import Toybox.Timer;
 import Toybox.Application.Properties;
-import Toybox.System;
 
 // Values must match resources/properties/properties.xml and
 // resources/settings/settings.xml (the "TempUnit" list setting).
@@ -45,6 +44,18 @@ function formatTemperatureCelsius(celsius as Lang.Float?) as Lang.String {
     return value.format("%.1f") + suffix;
 }
 
+// Formats a station distance (kilometers, as returned by the API's
+// "dist" field - see requestNearestStation()) for display. Returns ""
+// rather than "--" when unavailable, so callers can just skip the
+// segment entirely instead of showing a placeholder.
+(:glance)
+function formatDistanceKm(km as Lang.Float?) as Lang.String {
+    if (km == null) {
+        return "";
+    }
+    return km.format("%.1f") + " km";
+}
+
 // Plain data holder passed back to whoever called fetchNearestTemperature().
 // Keeping this as its own small class (rather than a loose Dictionary)
 // makes the calling code self-documenting and easy to type-check.
@@ -52,6 +63,7 @@ function formatTemperatureCelsius(celsius as Lang.Float?) as Lang.String {
 class WeatherResult {
     public var status as Lang.Number;
     public var temperatureCelsius as Lang.Float?;
+    public var distanceKm as Lang.Float?;
     public var stationName as Lang.String?;
     // Oldest-to-newest Celsius readings for the last ~24h at the same
     // station, already downsampled to a display-friendly point count.
@@ -65,12 +77,14 @@ class WeatherResult {
     function initialize(
         status as Lang.Number,
         temperatureCelsius as Lang.Float?,
+        distanceKm as Lang.Float?,
         stationName as Lang.String?,
         historyCelsius as Lang.Array<Lang.Float>?,
         httpCode as Lang.Number?
     ) {
         self.status = status;
         self.temperatureCelsius = temperatureCelsius;
+        self.distanceKm = distanceKm;
         self.stationName = stationName;
         self.historyCelsius = historyCelsius;
         self.httpCode = httpCode;
@@ -108,6 +122,7 @@ class TempustWeatherClient {
     // Stashed between the "current reading" request and the follow-up
     // "24h history" request, so the final WeatherResult can carry both.
     private var _pendingTemperatureCelsius as Lang.Float?;
+    private var _pendingDistanceKm as Lang.Float?;
     private var _pendingStationName as Lang.String?;
     private var _pendingHttpCode as Lang.Number?;
 
@@ -183,7 +198,7 @@ class TempustWeatherClient {
             return;
         }
 
-        invokeCallback(new WeatherResult(RESULT_NO_POSITION, null, null, null, null));
+        invokeCallback(new WeatherResult(RESULT_NO_POSITION, null, null, null, null, null));
     }
 
     // A Position.Info is only worth using if the system actually has a
@@ -244,18 +259,19 @@ class TempustWeatherClient {
 
     function onReceive(responseCode as Lang.Number, data as Lang.Dictionary or Lang.String or Null) as Void {
         if (responseCode != 200 || data == null || !(data instanceof Lang.Dictionary)) {
-            invokeCallback(new WeatherResult(RESULT_NETWORK_ERROR, null, null, null, responseCode));
+            invokeCallback(new WeatherResult(RESULT_NETWORK_ERROR, null, null, null, null, responseCode));
             return;
         }
 
         var stations = data.get("stations");
         if (stations == null || !(stations instanceof Lang.Array) || stations.size() == 0) {
-            invokeCallback(new WeatherResult(RESULT_NO_STATION, null, null, null, responseCode));
+            invokeCallback(new WeatherResult(RESULT_NO_STATION, null, null, null, null, responseCode));
             return;
         }
 
         var station = stations[0] as Lang.Dictionary;
         var rawTemp = station.get("temp");
+        var rawDist = station.get("dist");
         var rawName = station.get("title");
         var rawId = station.get("id");
 
@@ -263,6 +279,10 @@ class TempustWeatherClient {
         // conversion (if the user picked Fahrenheit) happens later,
         // in TempustView, purely for display.
         _pendingTemperatureCelsius = (rawTemp != null) ? rawTemp.toString().toFloat() : null;
+        // "dist" (kilometers, straight-line from the coordinates we
+        // queried with) is only present because we query by lat/lon -
+        // see https://www.temperatur.nu/info/api/.
+        _pendingDistanceKm = (rawDist != null) ? rawDist.toString().toFloat() : null;
         _pendingStationName = (rawName != null) ? rawName.toString() : null;
         _pendingHttpCode = responseCode;
 
@@ -272,7 +292,7 @@ class TempustWeatherClient {
             // No station id came back - can't look up its history, but
             // the current reading is still good on its own.
             invokeCallback(new WeatherResult(
-                RESULT_OK, _pendingTemperatureCelsius, _pendingStationName, null, _pendingHttpCode
+                RESULT_OK, _pendingTemperatureCelsius, _pendingDistanceKm, _pendingStationName, null, _pendingHttpCode
             ));
         }
     }
@@ -302,32 +322,9 @@ class TempustWeatherClient {
     }
 
     function onReceiveHistory(responseCode as Lang.Number, data as Lang.Dictionary or Lang.String or Null) as Void {
-        // Temporary console diagnostics - see LOCAL_SETUP.md, "Console
-        // output". Remove once the history graph is confirmed working
-        // end-to-end in the simulator/on-device.
-        System.println("Tempust: history responseCode=" + responseCode + " dataType=" + classNameOf(data));
-
-        var history = parseHistory(data);
-        System.println("Tempust: history points=" + ((history != null) ? history.size() : 0));
-
         invokeCallback(new WeatherResult(
-            RESULT_OK, _pendingTemperatureCelsius, _pendingStationName, history, _pendingHttpCode
+            RESULT_OK, _pendingTemperatureCelsius, _pendingDistanceKm, _pendingStationName, parseHistory(data), _pendingHttpCode
         ));
-    }
-
-    private function classNameOf(value as Lang.Object?) as Lang.String {
-        if (value == null) {
-            return "null";
-        }
-        if (value instanceof Lang.Dictionary) {
-            return "Dictionary(keys=" + (value as Lang.Dictionary).keys() + ")";
-        }
-        if (value instanceof Lang.String) {
-            var s = value as Lang.String;
-            var preview = (s.length() > 80) ? (s.substring(0, 80) as Lang.String) + "..." : s;
-            return "String(" + preview + ")";
-        }
-        return value.toString();
     }
 
     // Response shape confirmed against a live request (?p=<id>&data=1&
@@ -340,23 +337,19 @@ class TempustWeatherClient {
     // slip into a Float array.
     private function parseHistory(data as Lang.Dictionary or Lang.String or Null) as Lang.Array<Lang.Float>? {
         if (data == null || !(data instanceof Lang.Dictionary)) {
-            System.println("Tempust: parseHistory - no dictionary in response");
             return null;
         }
 
         var stations = data.get("stations");
         if (!(stations instanceof Lang.Array) || stations.size() == 0) {
-            System.println("Tempust: parseHistory - no 'stations' array");
             return null;
         }
 
         var station = stations[0] as Lang.Dictionary;
         var rawEntries = station.get("data");
         if (!(rawEntries instanceof Lang.Array) || rawEntries.size() == 0) {
-            System.println("Tempust: parseHistory - no 'data' array on station (keys=" + station.keys() + ")");
             return null;
         }
-        System.println("Tempust: parseHistory - found " + rawEntries.size() + " raw entries");
 
         var values = [] as Lang.Array<Lang.Float>;
         var i = 0;

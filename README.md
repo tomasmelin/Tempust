@@ -26,9 +26,10 @@ API, based on the watch's GPS position.
   against this app's `minSdkVersion` (watches, handheld GPS units, and
   bike computers alike) instead of just the fr965 – see "Device
   support" below for what's included/excluded and why.
-- **Attribution:** a small "Data: temperatur.nu" line is shown at the
-  bottom of the widget whenever a reading is displayed, to satisfy
-  temperatur.nu's terms of use around crediting the source.
+- **Attribution:** a small "temperatur.nu" line is shown at the bottom
+  of the widget whenever a reading is displayed, to satisfy
+  temperatur.nu's terms of use around crediting the source. Distance
+  to the measuring station is shown next to its name instead.
 - **New icon:** a clearer 80×80 thermometer icon (a larger source
   resolution downsamples more cleanly on high-res AMOLED watches than
   the old 40×40 placeholder).

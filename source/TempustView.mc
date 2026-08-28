@@ -26,15 +26,20 @@ const SAUNA_REFERENCE_CELSIUS = 80.0;
 // against rounding/font-metric slop.
 const BEZEL_MARGIN_PX = 4;
 
-// Where the 24h graph starts vertically, as a fraction of screen
-// height. Its bottom edge is NOT a fixed fraction (see onUpdate()) -
-// it's computed to stop above wherever the hint/attribution rows
-// actually land, since those are anchored from their own measured
-// width outward and can vary in position by device and language.
-// The graph's horizontal extent is likewise computed at draw time
-// from the actual bezel shape (see safeHalfWidthAt()), not a fixed
-// margin.
+// Where the 24h graph sits vertically, as fractions of screen height.
+// Deliberately a FIXED band, not derived from where the footer rows
+// (hint/attribution) end up: an earlier version computed the graph's
+// bottom edge from the footer's bezel-nudged position, which on some
+// screen sizes could push the footer high enough to collapse the
+// graph to near-zero height - the graph would just silently fail to
+// show, with no error, on exactly the devices where the footer text
+// needed the most nudging. Keeping the graph's vertical space
+// unconditional avoids that whole failure mode; its horizontal extent
+// is still computed at draw time from the actual bezel shape (see
+// safeHalfWidthAt()), which is safe since that can only ever shrink
+// the box, never collapse it to nothing based on unrelated content.
 const GRAPH_TOP_FRACTION = 0.38;
+const GRAPH_BOTTOM_FRACTION = 0.72;
 
 // Vertical gap (in pixels) kept between stacked bottom rows (the 24h
 // graph, the refresh hint, and the attribution line) so a bezel-safety
@@ -53,6 +58,7 @@ class TempustView extends WatchUi.View {
     private var _isFetching as Lang.Boolean = false;
 
     private var _temperatureCelsius as Lang.Float?;
+    private var _distanceKm as Lang.Float?;
     private var _stationName as Lang.String = "";
     private var _historyCelsius as Lang.Array<Lang.Float>?;
     private var _statusText as Lang.String = "";
@@ -116,6 +122,7 @@ class TempustView extends WatchUi.View {
 
         if (result.status == RESULT_OK) {
             _temperatureCelsius = result.temperatureCelsius;
+            _distanceKm = result.distanceKm;
             _stationName = (result.stationName != null)
                 ? result.stationName
                 : WatchUi.loadResource(Rez.Strings.UnknownStation) as Lang.String;
@@ -171,13 +178,11 @@ class TempustView extends WatchUi.View {
         var width = dc.getWidth();
         var height = dc.getHeight();
 
-        // Both bottom rows are anchored from their own measured width
-        // outward (see bottomAnchoredTopY()) and stacked bottom-up, so
-        // whichever one turns out wider - on this device, in whatever
-        // language - can never end up overlapping the other. Computed
-        // up front so the graph below can be sized to stop clear of
-        // them, whatever position they land on.
-        var attributionText = "Data: temperatur.nu";
+        // Attribution is required by temperatur.nu's terms of use (see
+        // README) but kept to just the name - short enough that it and
+        // the hint below it need little to no bezel-safety nudging on
+        // any device, unlike the old "Data: temperatur.nu" wording.
+        var attributionText = "temperatur.nu";
         var attribDims = dc.getTextDimensions(attributionText, Graphics.FONT_XTINY);
         var attribTopY = bottomAnchoredTopY(dc, attributionText, Graphics.FONT_XTINY, height - attribDims[1]);
 
@@ -199,36 +204,41 @@ class TempustView extends WatchUi.View {
                 formatTemperature(),
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
             );
+
+            var distanceText = formatDistanceKm(_distanceKm);
+            var stationLine = (distanceText.length() > 0)
+                ? _stationName + " · " + distanceText
+                : _stationName;
             drawSafeText(
                 dc, height * 0.33,
                 Graphics.FONT_XTINY,
-                _stationName,
+                stationLine,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
 
+            // Fixed vertical band (see GRAPH_TOP/BOTTOM_FRACTION) -
+            // only the horizontal extent adapts to the bezel.
             var graphTop = height * GRAPH_TOP_FRACTION;
-            var graphBottom = hintTopY - ROW_GAP_PX;
-            if (graphBottom > graphTop) {
-                // Chord width shrinks the further a row sits from the
-                // vertical center, so the tighter of the graph's top
-                // and bottom edges is what has to fit - same reasoning
-                // as drawSafeText(), just for a box instead of a text
-                // baseline.
-                var graphHalfWidth = safeHalfWidthAt(dc, graphTop);
-                var bottomHalfWidth = safeHalfWidthAt(dc, graphBottom);
-                if (bottomHalfWidth < graphHalfWidth) {
-                    graphHalfWidth = bottomHalfWidth;
-                }
-
-                drawTemperatureGraph(
-                    dc,
-                    (width / 2.0) - graphHalfWidth, graphTop,
-                    graphHalfWidth * 2, graphBottom - graphTop,
-                    _historyCelsius,
-                    Graphics.COLOR_ORANGE,
-                    Graphics.COLOR_DK_GRAY
-                );
+            var graphBottom = height * GRAPH_BOTTOM_FRACTION;
+            // Chord width shrinks the further a row sits from the
+            // vertical center, so the tighter of the graph's top and
+            // bottom edges is what has to fit - same reasoning as
+            // drawSafeText(), just for a box instead of a text
+            // baseline.
+            var graphHalfWidth = safeHalfWidthAt(dc, graphTop);
+            var bottomHalfWidth = safeHalfWidthAt(dc, graphBottom);
+            if (bottomHalfWidth < graphHalfWidth) {
+                graphHalfWidth = bottomHalfWidth;
             }
+
+            drawTemperatureGraph(
+                dc,
+                (width / 2.0) - graphHalfWidth, graphTop,
+                graphHalfWidth * 2, graphBottom - graphTop,
+                _historyCelsius,
+                Graphics.COLOR_ORANGE,
+                Graphics.COLOR_DK_GRAY
+            );
         }
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
