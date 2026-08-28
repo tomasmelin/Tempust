@@ -74,6 +74,9 @@ class TempustView extends WatchUi.View {
     private var _stationName as Lang.String = "";
     private var _historyCelsius as Lang.Array<Lang.Float>?;
     private var _statusText as Lang.String = "";
+    // Temporary diagnostics - see LOCAL_SETUP.md "Console output".
+    // Remove once the graph is confirmed showing in the simulator.
+    private var _debugGraphLogged as Lang.Boolean = false;
 
     private var _easterEggActive as Lang.Boolean = false;
     private var _easterEggTimer as Timer.Timer?;
@@ -142,6 +145,7 @@ class TempustView extends WatchUi.View {
                 : WatchUi.loadResource(Rez.Strings.UnknownStation) as Lang.String;
             _historyCelsius = result.historyCelsius;
             _statusText = "";
+            _debugGraphLogged = false;
         } else if (result.status == RESULT_NO_POSITION) {
             _statusText = WatchUi.loadResource(Rez.Strings.StatusNoPosition) as Lang.String;
         } else if (result.status == RESULT_NO_STATION) {
@@ -256,6 +260,16 @@ class TempustView extends WatchUi.View {
             var bottomHalfWidth = safeHalfWidthAt(dc, graphBottom);
             if (bottomHalfWidth < graphHalfWidth) {
                 graphHalfWidth = bottomHalfWidth;
+            }
+
+            if (!_debugGraphLogged) {
+                _debugGraphLogged = true;
+                var pointCount = (_historyCelsius != null) ? _historyCelsius.size() : 0;
+                System.println(
+                    "Tempust: graph box x=" + ((width / 2.0) - graphHalfWidth)
+                    + " y=" + graphTop + " w=" + (graphHalfWidth * 2)
+                    + " h=" + (graphBottom - graphTop) + " points=" + pointCount
+                );
             }
 
             drawTemperatureGraph(

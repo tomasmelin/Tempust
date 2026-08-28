@@ -19,16 +19,12 @@ import Toybox.Lang;
 // to draw its own icon badge on top of/beside that and it looked
 // wrong (a stray line instead of a recognisable thermometer).
 //
-// Styling (a flat, muted background card with a thin left accent bar)
-// follows the look of other Connect IQ glances that use one - subtle
-// rather than a bright saturated fill, which read as "buggy" more
-// than "styled" in testing.
+// No background fill either - a couple of attempts at a colored card
+// (a full gradient, then a flatter muted one) both read as a
+// graphical glitch rather than styling, so this leaves the row's own
+// background showing through, as it did originally.
 (:glance)
 class TempustGlanceView extends WatchUi.GlanceView {
-
-    // Muted background card and its left accent bar.
-    private const CARD_COLOR = 0x142430;
-    private const ACCENT_COLOR = 0x3AA0FF;
 
     private var _client as TempustWeatherClient;
     private var _isFetching as Lang.Boolean = false;
@@ -84,9 +80,12 @@ class TempustGlanceView extends WatchUi.GlanceView {
         var width = dc.getWidth();
         var height = dc.getHeight();
 
-        drawCard(dc, width, height);
-
-        // A little padding past the accent bar; the system's own
+        // No fill: leave the row's own background showing through
+        // (transparent, reading as black on most devices/themes), as
+        // it was before this app tried adding a colored card - that
+        // read as a graphical bug rather than styling.
+        //
+        // A little padding past the left edge; the system's own
         // launcher-icon slot (outside our dc - see the class comment)
         // already accounts for itself, so text starts near the left
         // edge of what we're given, not offset for an icon we're not
@@ -117,22 +116,6 @@ class TempustGlanceView extends WatchUi.GlanceView {
                 Graphics.FONT_XTINY, line2, Graphics.COLOR_LT_GRAY
             );
         }
-    }
-
-    // Flat, muted card filling the row, with a thin brighter accent
-    // bar down the left edge - deliberately subtle (one solid fill
-    // plus one thin strip, not a multi-step gradient sweep) so it
-    // reads as a styling choice rather than a rendering glitch.
-    private function drawCard(dc as Graphics.Dc, width as Lang.Numeric, height as Lang.Numeric) as Void {
-        dc.setColor(CARD_COLOR, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(0, 0, width, height);
-
-        var barWidth = width * 0.015;
-        if (barWidth < 2) {
-            barWidth = 2;
-        }
-        dc.setColor(ACCENT_COLOR, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(0, 0, barWidth, height);
     }
 
     // Left-justified, vertically-centered text, shrunk to fit maxWidth

@@ -3,6 +3,7 @@ import Toybox.Position;
 import Toybox.Lang;
 import Toybox.Timer;
 import Toybox.Application.Properties;
+import Toybox.System;
 
 // Values must match resources/properties/properties.xml and
 // resources/settings/settings.xml (the "TempUnit" list setting).
@@ -291,6 +292,7 @@ class TempustWeatherClient {
         } else {
             // No station id came back - can't look up its history, but
             // the current reading is still good on its own.
+            System.println("Tempust: no station id in response, skipping history");
             invokeCallback(new WeatherResult(
                 RESULT_OK, _pendingTemperatureCelsius, _pendingDistanceKm, _pendingStationName, null, _pendingHttpCode
             ));
@@ -322,8 +324,14 @@ class TempustWeatherClient {
     }
 
     function onReceiveHistory(responseCode as Lang.Number, data as Lang.Dictionary or Lang.String or Null) as Void {
+        // Temporary diagnostics - see LOCAL_SETUP.md "Console output".
+        // Remove once the graph is confirmed showing in the simulator.
+        System.println("Tempust: history responseCode=" + responseCode);
+        var history = parseHistory(data);
+        System.println("Tempust: history points=" + ((history != null) ? history.size() : 0));
+
         invokeCallback(new WeatherResult(
-            RESULT_OK, _pendingTemperatureCelsius, _pendingDistanceKm, _pendingStationName, parseHistory(data), _pendingHttpCode
+            RESULT_OK, _pendingTemperatureCelsius, _pendingDistanceKm, _pendingStationName, history, _pendingHttpCode
         ));
     }
 
@@ -337,17 +345,20 @@ class TempustWeatherClient {
     // slip into a Float array.
     private function parseHistory(data as Lang.Dictionary or Lang.String or Null) as Lang.Array<Lang.Float>? {
         if (data == null || !(data instanceof Lang.Dictionary)) {
+            System.println("Tempust: parseHistory - response wasn't a Dictionary");
             return null;
         }
 
         var stations = data.get("stations");
         if (!(stations instanceof Lang.Array) || stations.size() == 0) {
+            System.println("Tempust: parseHistory - no 'stations' array (keys=" + data.keys() + ")");
             return null;
         }
 
         var station = stations[0] as Lang.Dictionary;
         var rawEntries = station.get("data");
         if (!(rawEntries instanceof Lang.Array) || rawEntries.size() == 0) {
+            System.println("Tempust: parseHistory - no 'data' array on station (keys=" + station.keys() + ")");
             return null;
         }
 
