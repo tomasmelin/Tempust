@@ -10,19 +10,25 @@ import Toybox.Lang;
 // so best practice is to keep it quick to load rather than polling
 // (see Core Topics > Glances in the Connect IQ SDK docs).
 //
-// Styled to match Connect IQ's own glances (Notifications, Calendar,
-// etc.): a round icon badge on the left, on a background that fades
-// from an accent color to black across the row. Blue here, since the
-// stock glances already claim green (Notifications) and orange
-// (weather). Drawing this background ourselves - rather than leaving
-// any of the row unpainted - is also what fixes an earlier graphical
-// glitch where an unstyled area of the row showed a stray placeholder
-// box instead of our content.
+// No custom icon drawing here: the dc passed to onUpdate() is
+// documented as "bounded by glance area" - a sub-region, not the
+// whole row - and in practice the system already draws this app's
+// launcher icon in its own reserved slot to the left of it, so text
+// starting near x=0 of our dc lands in the right place without us
+// drawing anything for the icon ourselves. An earlier version tried
+// to draw its own icon badge on top of/beside that and it looked
+// wrong (a stray line instead of a recognisable thermometer).
+//
+// Styling (a flat, muted background card with a thin left accent bar)
+// follows the look of other Connect IQ glances that use one - subtle
+// rather than a bright saturated fill, which read as "buggy" more
+// than "styled" in testing.
 (:glance)
 class TempustGlanceView extends WatchUi.GlanceView {
 
-    // Background fades from this color (left) to black (right).
-    private const ACCENT_COLOR = 0x2E8FFF;
+    // Muted background card and its left accent bar.
+    private const CARD_COLOR = 0x142430;
+    private const ACCENT_COLOR = 0x3AA0FF;
 
     private var _client as TempustWeatherClient;
     private var _isFetching as Lang.Boolean = false;
@@ -78,13 +84,14 @@ class TempustGlanceView extends WatchUi.GlanceView {
         var width = dc.getWidth();
         var height = dc.getHeight();
 
-        drawFadeBackground(dc, width, height);
-        drawIconBadge(dc, height);
+        drawCard(dc, width, height);
 
-        // Text starts just past the icon badge, with a small gutter on
-        // both sides so a device with very little glance-row width
-        // never has fitTextToWidth() work with a negative budget.
-        var textLeft = height * 1.15;
+        // A little padding past the accent bar; the system's own
+        // launcher-icon slot (outside our dc - see the class comment)
+        // already accounts for itself, so text starts near the left
+        // edge of what we're given, not offset for an icon we're not
+        // drawing.
+        var textLeft = width * 0.06;
         var textWidth = width - textLeft - (width * 0.03);
         if (textWidth < 0) {
             textWidth = 0;
@@ -112,47 +119,20 @@ class TempustGlanceView extends WatchUi.GlanceView {
         }
     }
 
-    // Horizontal strips blending from ACCENT_COLOR at the left edge to
-    // black at the right, approximating a fade without relying on
-    // alpha blending (fillRectangle only supports a solid fill color,
-    // and COLOR_TRANSPARENT means "don't fill", not "partially fill").
-    private function drawFadeBackground(dc as Graphics.Dc, width as Lang.Numeric, height as Lang.Numeric) as Void {
-        var steps = 20;
-        var stripWidth = (width.toFloat() / steps) + 1;
+    // Flat, muted card filling the row, with a thin brighter accent
+    // bar down the left edge - deliberately subtle (one solid fill
+    // plus one thin strip, not a multi-step gradient sweep) so it
+    // reads as a styling choice rather than a rendering glitch.
+    private function drawCard(dc as Graphics.Dc, width as Lang.Numeric, height as Lang.Numeric) as Void {
+        dc.setColor(CARD_COLOR, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(0, 0, width, height);
 
-        var r0 = (ACCENT_COLOR >> 16) & 0xFF;
-        var g0 = (ACCENT_COLOR >> 8) & 0xFF;
-        var b0 = ACCENT_COLOR & 0xFF;
-
-        var i = 0;
-        while (i < steps) {
-            var t = 1.0 - (i.toFloat() / (steps - 1));
-            var color = (((r0 * t).toNumber()) << 16)
-                | (((g0 * t).toNumber()) << 8)
-                | ((b0 * t).toNumber());
-
-            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-            dc.fillRectangle(i * (width.toFloat() / steps), 0, stripWidth, height);
-            i += 1;
+        var barWidth = width * 0.015;
+        if (barWidth < 2) {
+            barWidth = 2;
         }
-    }
-
-    // Simple drawn thermometer glyph (a filled circle badge, no bitmap
-    // asset needed) sized to the row height, matching the launcher
-    // icon's look closely enough to be recognizable at a glance.
-    private function drawIconBadge(dc as Graphics.Dc, rowHeight as Lang.Numeric) as Void {
-        var cx = rowHeight * 0.5;
-        var cy = rowHeight * 0.5;
-        var r = rowHeight * 0.32;
-
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.fillCircle(cx, cy, r);
-
         dc.setColor(ACCENT_COLOR, Graphics.COLOR_TRANSPARENT);
-        dc.setPenWidth(2);
-        dc.drawLine(cx, cy - (r * 0.5), cx, cy + (r * 0.3));
-        dc.fillCircle(cx, cy + (r * 0.45), r * 0.22);
-        dc.setPenWidth(1);
+        dc.fillRectangle(0, 0, barWidth, height);
     }
 
     // Left-justified, vertically-centered text, shrunk to fit maxWidth
