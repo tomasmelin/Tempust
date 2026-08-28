@@ -4,6 +4,7 @@ import Toybox.Lang;
 import Toybox.Timer;
 import Toybox.Application.Properties;
 import Toybox.System;
+import Toybox.Time;
 
 // Values must match resources/properties/properties.xml and
 // resources/settings/settings.xml (the "TempUnit" list setting).
@@ -116,16 +117,29 @@ class TempustWeatherClient {
     // watch screen (or the glance's tight memory budget) can use.
     private const HISTORY_MAX_POINTS = 30;
 
+    // Fallback window (seconds) used when the full day's raw readings
+    // are too large a response for the platform to accept - see
+    // onReceiveHistory(). A busy station reporting every couple of
+    // minutes puts span=1day (~700 readings) well past that ceiling
+    // regardless of the app's own available memory; confirmed via
+    // Communications.NETWORK_RESPONSE_TOO_LARGE in testing. 3h keeps
+    // even a once-a-minute station comfortably under it.
+    private const HISTORY_FALLBACK_WINDOW_SECONDS = 3 * 60 * 60;
+
     private var _callback as Lang.Method?;
     private var _locationTimeoutTimer as Timer.Timer?;
     private var _positioningActive as Lang.Boolean = false;
 
     // Stashed between the "current reading" request and the follow-up
-    // "24h history" request, so the final WeatherResult can carry both.
+    // history request(s), so the final WeatherResult can carry both.
     private var _pendingTemperatureCelsius as Lang.Float?;
     private var _pendingDistanceKm as Lang.Float?;
     private var _pendingStationName as Lang.String?;
     private var _pendingHttpCode as Lang.Number?;
+    private var _pendingStationId as Lang.String?;
+    // Guards the one-time retry in onReceiveHistory() so a station
+    // that's too large even at the fallback window can't loop forever.
+    private var _historyRetriedWithNarrowerWindow as Lang.Boolean = false;
 
     // Garmin's Position API has no built-in timeout: if a GPS fix never
     // comes in (indoors, weak signal, simulator location never set),
@@ -288,47 +302,82 @@ class TempustWeatherClient {
         _pendingHttpCode = responseCode;
 
         if (rawId != null) {
-            requestHistory(rawId.toString());
+            _pendingStationId = rawId.toString();
+            _historyRetriedWithNarrowerWindow = false;
+            requestHistory(_pendingStationId as Lang.String, null, null);
         } else {
             // No station id came back - can't look up its history, but
             // the current reading is still good on its own.
-            System.println("Tempust: no station id in response, skipping history");
             invokeCallback(new WeatherResult(
                 RESULT_OK, _pendingTemperatureCelsius, _pendingDistanceKm, _pendingStationName, null, _pendingHttpCode
             ));
         }
     }
 
-    // Follow-up request for the last ~24h of readings at the station
-    // we just identified, keyed by its "id" (the "p" param - see
-    // https://www.temperatur.nu/info/api/). Always resolves the
-    // overall fetch with RESULT_OK: a missing/malformed history is
-    // just "no graph today", not a reason to discard the current
-    // reading we already have.
-    private function requestHistory(stationId as Lang.String) as Void {
-        var params = {
-            "p"           => stationId,
-            "data"        => "1",
-            "span"        => "1day",
-            "sensor_type" => "air",
-            "cli"         => CLIENT_ID
-        };
-
+    // Follow-up request for readings at the station we just
+    // identified, keyed by its "id" (the "p" param - see
+    // https://www.temperatur.nu/info/api/). With startEpoch/endEpoch
+    // both null, requests the full last-24h span (span=1day);
+    // otherwise requests just that window - see onReceiveHistory() for
+    // when/why the narrower form is used. Always resolves the overall
+    // fetch with RESULT_OK: a missing/malformed history is just "no
+    // graph today", not a reason to discard the current reading we
+    // already have.
+    private function requestHistory(stationId as Lang.String, startEpoch as Lang.Number?, endEpoch as Lang.Number?) as Void {
         var options = {
             :method       => Communications.HTTP_REQUEST_METHOD_GET,
             :headers      => { "Accept" => "application/json" },
             :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON
         };
 
-        Communications.makeWebRequest(API_URL, params, options, method(:onReceiveHistory));
+        if (startEpoch != null && endEpoch != null) {
+            var windowParams = {
+                "p"           => stationId,
+                "data"        => "1",
+                "start"       => startEpoch,
+                "end"         => endEpoch,
+                "sensor_type" => "air",
+                "cli"         => CLIENT_ID
+            };
+            Communications.makeWebRequest(API_URL, windowParams, options, method(:onReceiveHistory));
+        } else {
+            var fullDayParams = {
+                "p"           => stationId,
+                "data"        => "1",
+                "span"        => "1day",
+                "sensor_type" => "air",
+                "cli"         => CLIENT_ID
+            };
+            Communications.makeWebRequest(API_URL, fullDayParams, options, method(:onReceiveHistory));
+        }
     }
 
     function onReceiveHistory(responseCode as Lang.Number, data as Lang.Dictionary or Lang.String or Null) as Void {
-        // Temporary diagnostics - see LOCAL_SETUP.md "Console output".
-        // Remove once the graph is confirmed showing in the simulator.
-        System.println("Tempust: history responseCode=" + responseCode);
+        if (responseCode == Communications.NETWORK_RESPONSE_TOO_LARGE
+            && !_historyRetriedWithNarrowerWindow
+            && _pendingStationId != null) {
+            // A full day's raw readings can be too large a response
+            // for a station that reports every minute or two -
+            // confirmed via testing (see HISTORY_FALLBACK_WINDOW_SECONDS).
+            // Retry once with a much narrower window rather than
+            // giving up on the graph entirely.
+            _historyRetriedWithNarrowerWindow = true;
+            var now = Time.now().value();
+            // Temporary diagnostic - see LOCAL_SETUP.md "Console
+            // output". Remove once the graph is confirmed showing.
+            System.println("Tempust: full-day history too large, retrying with a " + (HISTORY_FALLBACK_WINDOW_SECONDS / 3600) + "h window");
+            requestHistory(
+                _pendingStationId as Lang.String,
+                now - HISTORY_FALLBACK_WINDOW_SECONDS,
+                now
+            );
+            return;
+        }
+
         var history = parseHistory(data);
-        System.println("Tempust: history points=" + ((history != null) ? history.size() : 0));
+        // Temporary diagnostic - see LOCAL_SETUP.md "Console output".
+        // Remove once the graph is confirmed showing.
+        System.println("Tempust: history responseCode=" + responseCode + " points=" + ((history != null) ? history.size() : 0));
 
         invokeCallback(new WeatherResult(
             RESULT_OK, _pendingTemperatureCelsius, _pendingDistanceKm, _pendingStationName, history, _pendingHttpCode
