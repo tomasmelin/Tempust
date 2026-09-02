@@ -33,9 +33,9 @@
             assume a clean build stays clean at every value.
         -->
         <!--
-            Every device in the installed SDK's database (165 entries)
-            that (a) supports the Widget app type and (b) actually
-            builds against minSdkVersion above - checked by compiling
+            Every device in the installed SDK's device database that
+            (a) supports the Widget app type and (b) actually builds
+            against minSdkVersion above - checked by compiling
             individually for each one, not guessed. That's the
             practical definition of "reasonable Garmin devices for
             this kind of app" used here: this widget needs GPS +
@@ -44,6 +44,18 @@
             handheld GPS units (GPSMAP, Montana, eTrex Touch), and bike
             computers (Edge) alike, since ambient temperature is
             useful on all of them.
+
+            fenix 9 (43mm/47mm, Pro 43/47/51mm, Pro Solar 47/51mm)
+            added 2026-09 once the installed SDK's device database
+            picked them up - the SDK Manager can refresh that database
+            in place (no new SDK version folder) ahead of a full SDK
+            release, so a device rejected as "invalid" one day can
+            become valid the next without anything in this project
+            changing. Re-verified by compiling for each fenix 9 id
+            individually, same as everything else here, not assumed
+            from the SDK Manager's device catalog alone (that catalog
+            can know a product exists before the compiler itself
+            supports building for it).
 
             Excluded, and why:
             - Devices without Widget support at all (mostly Garmin's
@@ -129,6 +141,13 @@
             <iq:product id="fenix8pro47mm"/>
             <iq:product id="fenix8solar47mm"/>
             <iq:product id="fenix8solar51mm"/>
+            <iq:product id="fenix943mm"/>
+            <iq:product id="fenix947mm"/>
+            <iq:product id="fenix9pro43mm"/>
+            <iq:product id="fenix9pro47mm"/>
+            <iq:product id="fenix9pro51mm"/>
+            <iq:product id="fenix9prosolar47mm"/>
+            <iq:product id="fenix9prosolar51mm"/>
             <iq:product id="fenixe"/>
             <iq:product id="fr165"/>
             <iq:product id="fr165m"/>
